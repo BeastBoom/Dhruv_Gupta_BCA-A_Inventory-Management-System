@@ -11,11 +11,10 @@ app.use(cors());
 app.use(express.json());
 
 const connection = mysql.createConnection({
-    host: process.env.DB_HOST,      // Use Railway host
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3000,
+  host: process.env.DB_HOST, // or your MySQL host
+  user: process.env.DB_USER,      // your MySQL username
+  password: process.env.DB_PASSWORD, // your MySQL password
+  database: process.env.DB_DATABASE, // your database name
 });
 
 

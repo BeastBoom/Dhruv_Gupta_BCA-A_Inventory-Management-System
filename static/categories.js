@@ -62,7 +62,7 @@
   async function deleteCategory(categoryId) {
     if (confirm('Are you sure you want to delete this category?')) {
       try {
-        const response = await fetch(`http://inventory-management-system-production-83f5.up.railway.app/api/categories/${categoryId}`, {
+        const response = await fetch(`http://localhost:3000/api/categories/${categoryId}`, {
           method: 'DELETE'
         });
         if (response.ok) {
@@ -77,7 +77,7 @@
   // Fetch all categories
   async function fetchCategories() {
     try {
-      const response = await fetch('http://inventory-management-system-production-83f5.up.railway.app/api/categories');
+      const response = await fetch('http://localhost:3000/api/categories');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -124,7 +124,7 @@
 
       if (editingCategoryRow) {
         // Editing an existing category
-        fetch(`http://inventory-management-system-production-83f5.up.railway.app/api/categories/${editingCategoryRow.dataset.id}`, {
+        fetch(`http://localhost:3000/api/categories/${editingCategoryRow.dataset.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(category)
@@ -139,7 +139,7 @@
         .catch(error => console.error("Error updating category:", error));
       } else {
         // Adding a new category
-        fetch("http://inventory-management-system-production-83f5.up.railway.app/api/categories", {
+        fetch("http://localhost:3000/api/categories", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(category)
