@@ -1,0 +1,130 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Dark Theme */
+body.dark-theme {
+    background-color: #121212;
+    color: #ffffff;
+}
+
+body.dark-theme .sidebar {
+    background-color: #1f1f1f;
+}
+
+body.dark-theme .main-content {
+    background-color: #1f1f1f;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 60px;
+    height: 100vh;
+    background-color: #333;
+    color: white;
+    position: fixed;
+    transition: width 0.3s;
+    overflow: hidden;
+}
+
+.sidebar.expanded {
+    width: 200px;
+}
+
+.sidebar .logo {
+    padding: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar ul li {
+    padding: 15px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.sidebar ul li a {
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar ul li a span {
+    margin-right: 10px;
+}
+
+/* Sidebar Styles */
+.sidebar ul li a .menu-text {
+    display: none; /* Hide text by default */
+    margin-left: 10px;
+}
+
+.sidebar.expanded ul li a .menu-text {
+    display: inline; /* Show text when sidebar is expanded */
+}
+
+.menu-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 15px;
+    text-align: left;
+    width: 100%;
+}
+
+/* Main Content Styles */
+.main-content {
+    margin-left: 60px;
+    padding: 20px;
+    transition: margin-left 0.3s;
+}
+
+.main-content.expanded {
+    margin-left: 200px;
+}
+
+/* Grid Layout for box-back divs */
+.overv > div {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* Always 2 columns per row */
+    gap: 20px; /* Space between boxes */
+    padding: 20px; /* Optional: Add padding around the grid */
+}
+
+/* Styling for each box-back div */
+.box-back {
+    height: 110px; /* Fixed height */
+    background-color: grey; /* Grey background */
+    border-radius: 8px; /* Optional: Rounded corners */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#theme-toggle {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}

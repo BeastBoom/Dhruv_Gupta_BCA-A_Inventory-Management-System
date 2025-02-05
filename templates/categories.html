@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Category Management</title>
+  <link rel="stylesheet" href="../static/categories.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="menu-toggle" id="menu-toggle">☰</button>
+    <ul>
+      <li>
+        <a href="index.html"><span>🏠</span><span class="menu-text">Overview</span></a>
+      </li>
+      <li>
+        <a href="products.html"><span>📦</span><span class="menu-text">Products</span></a>
+      </li>
+      <li><a href="categories.html"><span>📂</span><span class="menu-text">Categories</span></a></li>
+      <li>
+        <a href="orders.html"><span>📝</span><span class="menu-text">Orders</span></a>
+      </li>
+      <li>
+        <a href="#"
+          ><span>🔄</span><span class="menu-text">Subscriptions</span></a
+        >
+      </li>
+      <li>
+        <a href="customers.html"
+          ><span>👥</span><span class="menu-text">Customers</span></a
+        >
+      </li>
+      <li>
+        <a href="#"><span>📜</span><span class="menu-text">Licenses</span></a>
+      </li>
+      <li>
+        <a href="#"><span>📧</span><span class="menu-text">Emails</span></a>
+      </li>
+      <li>
+        <a href="#"><span>📊</span><span class="menu-text">Reports</span></a>
+      </li>
+      <li>
+        <a href="#"><span>🎨</span><span class="menu-text">Design</span></a>
+      </li>
+      <li>
+        <a href="#"><span>⚙️</span><span class="menu-text">Settings</span></a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content" id="main-content">
+    <header>
+      <h1>Category Management</h1>
+      <button id="theme-toggle">🌙</button>
+    </header>
+    <section class="category-management">
+      <div class="header-actions">
+        <button class="btn btn-add" onclick="openCategoryModal()">+ Add Category</button>
+      </div>
+      <div class="table-container">
+        <table class="category-table">
+          <thead>
+            <tr>
+              <th>Category Name</th>
+              <th>Description</th>
+              <th>Products</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="categoryTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+    
+    <!-- Category Modal -->
+    <div id="categoryModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeCategoryModal()">&times;</span>
+        <h2 id="categoryModalTitle">Add New Category</h2>
+        <form id="categoryForm">
+          <div class="form-group">
+            <label for="categoryName">Category Name:</label>
+            <input type="text" id="categoryName" name="categoryName" required>
+          </div>
+          <div class="form-group">
+            <label for="categoryDescription">Description:</label>
+            <textarea id="categoryDescription" name="categoryDescription" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="categoryProducts">Products (comma-separated IDs):</label>
+            <input type="text" id="categoryProducts" name="categoryProducts">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeCategoryModal()">Cancel</button>
+            <button type="submit" class="btn btn-save">Save Category</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="../static/categories.js"></script>
+</body>
+</html>

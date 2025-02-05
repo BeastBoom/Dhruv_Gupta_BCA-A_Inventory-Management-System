@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orders Management</title>
+  <link rel="stylesheet" href="../static/orders.css">
+</head>
+<body>
+  <div class="sidebar" id="sidebar">
+    <button class="menu-toggle" id="menu-toggle">☰</button>
+    <ul>
+      <li><a href="index.html"><span>🏠</span><span class="menu-text">Overview</span></a></li>
+      <li><a href="products.html"><span>📦</span><span class="menu-text">Products</span></a></li>
+      <li><a href="categories.html"><span>📂</span><span class="menu-text">Categories</span></a></li>
+      <li><a href="orders.html"><span>📝</span><span class="menu-text">Orders</span></a></li>
+      <li><a href="#"><span>🔄</span><span class="menu-text">Subscriptions</span></a></li>
+      <li><a href="customers.html"><span>👥</span><span class="menu-text">Customers</span></a></li>
+      <li><a href="#"><span>📜</span><span class="menu-text">Licenses</span></a></li>
+      <li><a href="#"><span>📧</span><span class="menu-text">Emails</span></a></li>
+      <li><a href="#"><span>📊</span><span class="menu-text">Reports</span></a></li>
+      <li><a href="#"><span>🎨</span><span class="menu-text">Design</span></a></li>
+      <li><a href="#"><span>⚙️</span><span class="menu-text">Settings</span></a></li>
+    </ul>
+  </div>
+  <div class="main-content" id="main-content">
+    <header>
+      <h1>Orders Management</h1>
+      <button id="theme-toggle">🌙</button>
+    </header>
+    <section class="orders-management">
+      <div class="header-actions">
+        <button class="btn btn-add" onclick="openOrderModal()">+ Add Order</button>
+      </div>
+      <div class="table-container">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Order Date</th>
+              <th>Order Value</th>
+              <th>Products</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <!-- Orders will be populated here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeOrderModal()">&times;</span>
+        <h2 id="orderModalTitle">Add New Order</h2>
+        <form id="orderForm">
+          <div class="form-group">
+            <label for="orderCustomerSelect">Customer:</label>
+            <select id="orderCustomerSelect" required>
+              <option value="">Select Customer</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="orderDate">Order Date:</label>
+            <input type="date" id="orderDate" required>
+          </div>
+          <div class="form-group">
+            <label>Order Items:</label>
+            <div class="order-items-wrapper">
+              <div id="orderItemsContainer"></div>
+              <button type="button" class="btn btn-add" onclick="addOrderItemRow()">Add Product</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="totalOrderValue">Total Order Value:</label>
+            <input type="text" id="totalOrderValue" readonly>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeOrderModal()">Cancel</button>
+            <button type="submit" class="btn btn-save">Save Order</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="../static/order.js"></script>
+</body>
+</html>

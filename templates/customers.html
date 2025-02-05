@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customers Management</title>
+  <link rel="stylesheet" href="../static/customer.css">
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <ul>
+          <li>
+            <a href="index.html"><span>🏠</span><span class="menu-text">Overview</span></a>
+          </li>
+          <li>
+            <a href="products.html"><span>📦</span><span class="menu-text">Products</span></a>
+          </li>
+          <li><a href="categories.html"><span>📂</span><span class="menu-text">Categories</span></a></li>
+          <li>
+            <a href="orders.html"><span>📝</span><span class="menu-text">Orders</span></a>
+          </li>
+          <li>
+            <a href="#"
+              ><span>🔄</span><span class="menu-text">Subscriptions</span></a
+            >
+          </li>
+          <li>
+            <a href="customers.html"
+              ><span>👥</span><span class="menu-text">Customers</span></a
+            >
+          </li>
+          <li>
+            <a href="#"><span>📜</span><span class="menu-text">Licenses</span></a>
+          </li>
+          <li>
+            <a href="#"><span>📧</span><span class="menu-text">Emails</span></a>
+          </li>
+          <li>
+            <a href="#"><span>📊</span><span class="menu-text">Reports</span></a>
+          </li>
+          <li>
+            <a href="#"><span>🎨</span><span class="menu-text">Design</span></a>
+          </li>
+          <li>
+            <a href="#"><span>⚙️</span><span class="menu-text">Settings</span></a>
+          </li>
+        </ul>
+      </div>
+  <div class="main-content" id="main-content">
+    <header>
+      <h1>Customers Management</h1>
+      <button id="theme-toggle">🌙</button>
+    </header>
+    <section class="customers-management">
+      <div class="header-actions">
+        <button class="btn btn-add" onclick="openCustomerModal()">+ Add Customer</button>
+      </div>
+      <div class="table-container">
+        <table class="customers-table">
+          <thead>
+            <tr>
+              <th>Customer Name</th>
+              <th>Customer Number</th>
+              <th>Email</th>
+              <th>Orders</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="customersTableBody">
+            <!-- Customers will be populated here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <!-- Customer Modal -->
+    <div id="customerModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeCustomerModal()">&times;</span>
+        <h2 id="customerModalTitle">Add New Customer</h2>
+        <form id="customerForm">
+          <div class="form-group">
+            <label for="customerName">Customer Name:</label>
+            <input type="text" id="customerName" required>
+          </div>
+          <div class="form-group">
+            <label for="customerNumber">Customer Number:</label>
+            <input type="text" id="customerNumber" required>
+          </div>
+          <div class="form-group">
+            <label for="customerEmail">Email (Optional):</label>
+            <input type="email" id="customerEmail">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeCustomerModal()">Cancel</button>
+            <button type="submit" class="btn btn-save">Save Customer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="../static/customers.js"></script>
+  <script src="../static/script.js"></script>
+</body>
+</html>
