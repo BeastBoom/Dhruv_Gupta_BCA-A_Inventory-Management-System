@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', fetchCustomers);
 
 async function fetchCustomers() {
   try {
-    const response = await fetch('http://localhost:3000/api/customers');
+    const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/customers');
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const customers = await response.json();
     populateCustomersTable(customers);
@@ -61,7 +61,7 @@ function openCustomerEditModal(button) {
 
 async function deleteCustomer(customerId) {
   try {
-    const response = await fetch(`http://localhost:3000/api/customers/${customerId}`, {
+    const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/customers/${customerId}`, {
       method: 'DELETE'
     });
     if (response.ok) {
@@ -80,7 +80,7 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
   const customerData = { customer_number: customerNumber, name, email };
   
   if (editingCustomer) {
-    fetch(`http://localhost:3000/api/customers/${editingCustomer.getAttribute('data-id')}`, {
+    fetch(`https://inventory-management-system-xtb4.onrender.com/api/customers/${editingCustomer.getAttribute('data-id')}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(customerData)
@@ -92,7 +92,7 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
     })
     .catch(error => console.error("Error updating customer:", error));
   } else {
-    fetch("http://localhost:3000/api/customers", {
+    fetch("https://inventory-management-system-xtb4.onrender.com/api/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(customerData)
