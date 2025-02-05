@@ -1,5 +1,7 @@
-const express = require('express');
 const mysql = require('mysql2');
+const dotenv = require('dotenv');
+dotenv.config();
+const express = require('express');
 const cors = require('cors');
 const app = express();
 const PORT = 3000;
@@ -10,11 +12,12 @@ app.use(express.json());
 
 // MySQL Connection
 const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '', // your MySQL password
-  database: 'inventory_db',
+  host: process.env.DB_HOST || 'localhost',     // Use DB_HOST from env, fallback to localhost
+  user: process.env.DB_USER || 'root',            // Use DB_USER from env
+  password: process.env.DB_PASSWORD || '',        // Use DB_PASSWORD from env
+  database: process.env.DB_DATABASE || 'inventory_db' // Use DB_DATABASE from env
 });
+
 
 // Connect to MySQL and create tables if they don't exist
 connection.connect((err) => {
