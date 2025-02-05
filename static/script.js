@@ -22,7 +22,7 @@ let editingRow = null;
 
 async function fetchCategories() {
   try {
-      const response = await fetch('http://localhost:3000/api/categories');
+      const response = await fetch('http://inventory-management-system-production-83f5.up.railway.app/api/categories');
       if (!response.ok) throw new Error('Failed to fetch categories');
       const categories = await response.json();
 
@@ -78,7 +78,7 @@ window.openEditModal = function(button) {
 window.deleteProduct = async function(productId) {
   if (confirm('Are you sure you want to delete this product?')) {
     try {
-      const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+      const response = await fetch(`http://inventory-management-system-production-83f5.up.railway.app/api/products/${productId}`, {
         method: 'DELETE'
       });
       
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', fetchProducts);
 
 async function fetchProducts() {
   try {
-    const response = await fetch('http://localhost:3000/api/products');
+    const response = await fetch('http://inventory-management-system-production-83f5.up.railway.app/api/products');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -152,7 +152,7 @@ document.getElementById("productForm").addEventListener("submit", function (e) {
   };
 
   if (editingRow) {
-      fetch(`http://localhost:3000/api/products/${editingRow.dataset.id}`, {
+      fetch(`http://inventory-management-system-production-83f5.up.railway.app/api/products/${editingRow.dataset.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(product)
@@ -167,7 +167,7 @@ document.getElementById("productForm").addEventListener("submit", function (e) {
       })
       .catch(error => console.error("Error updating product:", error));
   } else {
-      fetch("http://localhost:3000/api/products", {
+      fetch("http://inventory-management-system-production-83f5.up.railway.app/api/products", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(product)
