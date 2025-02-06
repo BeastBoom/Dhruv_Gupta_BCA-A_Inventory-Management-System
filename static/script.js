@@ -103,6 +103,25 @@ function renderChart1() {
         options: {
           responsive: true,
           maintainAspectRatio: true,
+          scales: {
+            xAxes: [
+              {
+                ticks: {
+                  display: false,
+                },
+                gridlines: {
+                  display: false,
+                },
+              },
+            ],
+            yAxes: [
+              {
+                ticks: {
+                  beginAtZero: true,
+                },
+              },
+            ],
+          },
         },
       });
     })
