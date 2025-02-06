@@ -176,22 +176,45 @@ app.put('/api/products/:id', (req, res) => {
   );
 });
 
+// DELETE product endpoint with dependent order_items deletion
 app.delete('/api/products/:id', (req, res) => {
   const { id } = req.params;
-  connection.query('DELETE FROM products WHERE id = ?', [id], (err, results) => {
-    if (err) {
-      console.error('Error deleting product:', err);
-      return res.status(500).send('Error deleting product');
-    }
-    if (results.affectedRows === 0) return res.status(404).send('Product not found');
-    renumberProducts((err) => {
+
+  // First, delete any order_items referencing this product
+  connection.query(
+    'DELETE FROM order_items WHERE product_id = ?',
+    [id],
+    (err, orderItemsResult) => {
       if (err) {
-        console.error('Error renumbering products:', err);
-        return res.status(500).send('Error renumbering products');
+        console.error('Error deleting order items for product:', err);
+        return res.status(500).send('Error deleting order items for product');
       }
-      res.json({ message: 'Product deleted and IDs renumbered successfully' });
-    });
-  });
+
+      // Now, delete the product itself
+      connection.query(
+        'DELETE FROM products WHERE id = ?',
+        [id],
+        (err, productResult) => {
+          if (err) {
+            console.error('Error deleting product:', err);
+            return res.status(500).send('Error deleting product');
+          }
+          if (productResult.affectedRows === 0) {
+            return res.status(404).send('Product not found');
+          }
+          
+          // Optionally, renumber the products if desired
+          renumberProducts((err) => {
+            if (err) {
+              console.error('Error renumbering products:', err);
+              return res.status(500).send('Error renumbering products');
+            }
+            res.json({ message: 'Product and associated order items deleted successfully' });
+          });
+        }
+      );
+    }
+  );
 });
 
 /* ---------- CATEGORIES API ---------- */
