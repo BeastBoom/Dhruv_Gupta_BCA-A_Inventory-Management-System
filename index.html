@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Inventory Management System</title>
     <link rel="stylesheet" href="static/styles.css" />
+    <!-- Chart.js File -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
 
@@ -52,18 +54,39 @@
 
     <!-- Main Content -->
     <div class="main-content" id="main-content">
-      <section class="overv">
-        <div>
-          <div class="box-back"></div>
-          <div class="box-back"></div>
-          <div class="box-back"></div>
-          <div class="box-back"></div>
-        </div>
-      </section>
       <header>
         <h1>Inventory Management System</h1>
         <button id="theme-toggle">🌙</button>
       </header>
+
+      <!-- Metrics Section -->
+      <section class="overview-metrics">
+        <div class="box-back" id="total-stock">
+          <h3>Total Stock</h3>
+          <p id="stock-value">0</p>
+        </div>
+        <div class="box-back" id="total-customers">
+          <h3>Total Customers</h3>
+          <p id="customer-value">0</p>
+        </div>
+        <div class="box-back" id="total-sales">
+          <h3>Total Sales</h3>
+          <p id="sales-value">$0.00</p>
+        </div>
+        <div class="box-back" id="total-categories">
+          <h3>Total Categories</h3>
+          <p id="category-value">0</p>
+        </div>
+      </section>
+
+      <!-- Charts Section -->
+      <section class="overview-charts">
+        <canvas id="chart1"></canvas>
+        <canvas id="chart2"></canvas>
+        <canvas id="chart3"></canvas>
+        <canvas id="chart4"></canvas>
+      </section>
+    </div>
 
     <script src="static/script.js"></script>
   </body>
