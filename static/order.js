@@ -10,12 +10,30 @@ menuToggle.addEventListener('click', () => {
   mainContent.classList.toggle('expanded');
 });
 
-const themeToggle = document.getElementById('theme-toggle');
-const body = document.body;
-themeToggle.addEventListener('click', () => {
-  body.classList.toggle('dark-theme');
-  themeToggle.textContent = body.classList.contains('dark-theme') ? '☀️' : '🌙';
+document.addEventListener("DOMContentLoaded", () => {
+  const body = document.body;
+  const themeToggle = document.getElementById("theme-toggle");
+
+  // Check sessionStorage for dark mode preference
+  if (sessionStorage.getItem("darkTheme") === "true") {
+    body.classList.add("dark-theme");
+    if (themeToggle) {
+      themeToggle.textContent = "☀️"; // Show light icon when dark mode is active
+    }
+  }
+
+  // Set up the theme toggle button if it exists
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      body.classList.toggle("dark-theme");
+      // Save the current state in sessionStorage
+      sessionStorage.setItem("darkTheme", body.classList.contains("dark-theme"));
+      // Update the toggle button icon accordingly
+      themeToggle.textContent = body.classList.contains("dark-theme") ? "☀️" : "🌙";
+    });
+  }
 });
+
 
 // ------------------------------
 // Orders Page Logic
