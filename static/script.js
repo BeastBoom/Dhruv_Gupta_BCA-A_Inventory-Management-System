@@ -30,9 +30,18 @@ function initializeUIToggles() {
   }
   const themeToggle = document.getElementById("theme-toggle");
   const body = document.body;
+  // Session Storage
+  if (sessionStorage.getItem("darkTheme")==="true"){
+    body.classList.add("dark-theme");
+    if (themeToggle) {
+      themeToggle.textContent = "☀️";
+    }
+  }
+  
   if (themeToggle) {
     themeToggle.addEventListener("click", () => {
       body.classList.toggle("dark-theme");
+      sessionStorage.setItem("darkTheme",body.classList.contains("dark-theme"));
       themeToggle.textContent = body.classList.contains("dark-theme") ? "☀️" : "🌙";
     });
   }
