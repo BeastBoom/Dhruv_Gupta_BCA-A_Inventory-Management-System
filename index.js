@@ -159,35 +159,34 @@ app.post("/api/signup", (req, res) => {
 
 // Login Endpoint
 app.post("/api/login", (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password)}{
-    return res
-      .status(400)
-      .json({ success: false, message: "Username and password are required." });
+  let { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: "Username and password are required." });
   }
   username = username.trim();
   password = password.trim();
+
   connection.query(
     "SELECT * FROM users WHERE username = ?",
     [username],
     (err, results) => {
       if (err) {
         console.error("Error fetching user:", err);
-        return res
-          .status(500)
-          .json({ success: false, message: "Login failed." });
+        return res.status(500).json({ success: false, message: "Login failed." });
       }
       if (results.length === 0) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid credentials." });
+        console.error("No user found for username:", username);
+        return res.status(400).json({ success: false, message: "Invalid credentials." });
       }
       const user = results[0];
       bcrypt.compare(password, user.password, (err, match) => {
-        if (err || !match) {
-          return res
-            .status(400)
-            .json({ success: false, message: "Invalid credentials." });
+        if (err) {
+          console.error("Error comparing password:", err);
+          return res.status(500).json({ success: false, message: "Login failed." });
+        }
+        if (!match) {
+          console.error("Password mismatch for user:", username);
+          return res.status(400).json({ success: false, message: "Invalid credentials." });
         }
         res.json({ success: true, user: { id: user.id, username: user.username } });
       });
