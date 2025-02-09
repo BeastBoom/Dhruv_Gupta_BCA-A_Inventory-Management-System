@@ -79,7 +79,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (confirm('Are you sure you want to delete this category?')) {
       try {
         const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/categories/${categoryId}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": sessionStorage.getItem("userId")
+          }
         });
         if (response.ok) {
           document.querySelector(`tr[data-id="${categoryId}"]`)?.remove();
@@ -93,7 +97,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Fetch all categories
   async function fetchCategories() {
     try {
-      const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/categories');
+      const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/categories', {
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": sessionStorage.getItem("userId")
+        }
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -142,7 +151,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Editing an existing category
         fetch(`https://inventory-management-system-xtb4.onrender.com/api/categories/${editingCategoryRow.dataset.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-user-id': sessionStorage.getItem("userId")
+          },
           body: JSON.stringify(category)
         })
         .then(response => response.json())
@@ -157,7 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Adding a new category
         fetch("https://inventory-management-system-xtb4.onrender.com/api/categories", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "x-user-id": sessionStorage.getItem("userId")
+          },
           body: JSON.stringify(category)
         })
         .then(response => response.json())

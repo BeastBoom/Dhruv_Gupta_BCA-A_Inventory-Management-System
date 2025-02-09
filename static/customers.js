@@ -5,7 +5,12 @@ document.addEventListener('DOMContentLoaded', fetchCustomers);
 
 async function fetchCustomers() {
   try {
-    const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/customers');
+    const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/customers', {
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      }
+    });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const customers = await response.json();
     populateCustomersTable(customers);
@@ -62,7 +67,11 @@ function openCustomerEditModal(button) {
 async function deleteCustomer(customerId) {
   try {
     const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/customers/${customerId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      }
     });
     if (response.ok) {
       document.querySelector(`tr[data-id="${customerId}"]`)?.remove();
@@ -82,7 +91,10 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
   if (editingCustomer) {
     fetch(`https://inventory-management-system-xtb4.onrender.com/api/customers/${editingCustomer.getAttribute('data-id')}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-id': sessionStorage.getItem("userId")
+      },
       body: JSON.stringify(customerData)
     })
     .then(response => response.json())
@@ -94,7 +106,10 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
   } else {
     fetch("https://inventory-management-system-xtb4.onrender.com/api/customers", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      },
       body: JSON.stringify(customerData)
     })
     .then(response => response.json())

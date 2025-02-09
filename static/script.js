@@ -59,25 +59,45 @@ let chart4Instance = null;
 // Dashboard Functions (Chart.js Integration)
 // ------------------------------
 function fetchTotalStock() {
-  return fetch("https://inventory-management-system-xtb4.onrender.com/api/products")
+  return fetch("https://inventory-management-system-xtb4.onrender.com/api/products", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((products) => products.reduce((sum, p) => sum + (parseInt(p.quantity) || 0), 0));
 }
 
 function fetchTotalCustomers() {
-  return fetch("https://inventory-management-system-xtb4.onrender.com/api/customers")
+  return fetch("https://inventory-management-system-xtb4.onrender.com/api/customers", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((customers) => customers.length);
 }
 
 function fetchTotalSales() {
-  return fetch("https://inventory-management-system-xtb4.onrender.com/api/orders")
+  return fetch("https://inventory-management-system-xtb4.onrender.com/api/orders", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((orders) => orders.reduce((sum, o) => sum + (parseFloat(o.order_value) || 0), 0));
 }
 
 function fetchTotalCategories() {
-  return fetch("https://inventory-management-system-xtb4.onrender.com/api/categories")
+  return fetch("https://inventory-management-system-xtb4.onrender.com/api/categories", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((categories) => categories.length);
 }
@@ -91,7 +111,12 @@ function renderChart1() {
   if (chart1Instance) {
     chart1Instance.destroy();
   }
-  fetch("https://inventory-management-system-xtb4.onrender.com/api/products")
+  fetch("https://inventory-management-system-xtb4.onrender.com/api/products", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((products) => {
       const labels = products.map((p) => p.name);
@@ -146,7 +171,12 @@ function renderChart2() {
   if (chart2Instance) {
     chart2Instance.destroy();
   }
-  fetch("https://inventory-management-system-xtb4.onrender.com/api/customers")
+  fetch("https://inventory-management-system-xtb4.onrender.com/api/customers", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((customers) => {
       const labels = customers.map((c) => c.name);
@@ -189,7 +219,12 @@ function renderChart3() {
   if (chart3Instance) {
     chart3Instance.destroy();
   }
-  fetch("https://inventory-management-system-xtb4.onrender.com/api/orders")
+  fetch("https://inventory-management-system-xtb4.onrender.com/api/orders", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((orders) => {
       const salesByDate = {};
@@ -232,7 +267,12 @@ function renderChart4() {
   if (chart4Instance) {
     chart4Instance.destroy();
   }
-  fetch("https://inventory-management-system-xtb4.onrender.com/api/categories")
+  fetch("https://inventory-management-system-xtb4.onrender.com/api/categories", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((categories) => {
       const labels = categories.map((c) => c.name);
@@ -300,7 +340,12 @@ let editingRowProd = null;
 
 // Fetch products and populate the product table
 function fetchProducts() {
-  fetch("https://inventory-management-system-xtb4.onrender.com/api/products")
+  fetch("https://inventory-management-system-xtb4.onrender.com/api/products", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       return res.json();
@@ -338,7 +383,12 @@ function populateTable(products) {
 
 // Fetch categories and populate the category dropdown
 function fetchCategories() {
-  return fetch("https://inventory-management-system-xtb4.onrender.com/api/categories")
+  return fetch("https://inventory-management-system-xtb4.onrender.com/api/categories", {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then((res) => res.json())
     .then((categories) => {
       const categoryDropdown = document.getElementById("categorySelect");
@@ -412,6 +462,10 @@ async function deleteProduct(productId) {
     try {
       const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/products/${productId}`, {
         method: "DELETE",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-id": sessionStorage.getItem("userId")
+        },
       });
       if (response.ok) {
         const row = document.querySelector(`tr[data-id="${productId}"]`);
@@ -453,7 +507,10 @@ document.getElementById("productForm").addEventListener("submit", async function
     try {
       const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/products/${editingRowProd.dataset.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-id": sessionStorage.getItem("userId")
+        },
         body: JSON.stringify(product),
       });
       const data = await response.json();
@@ -471,7 +528,10 @@ document.getElementById("productForm").addEventListener("submit", async function
     try {
       const response = await fetch("https://inventory-management-system-xtb4.onrender.com/api/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-id": sessionStorage.getItem("userId")
+        },
         body: JSON.stringify(product),
       });
       await response.json();

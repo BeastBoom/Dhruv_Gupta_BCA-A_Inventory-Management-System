@@ -47,7 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Fetch orders from the API and populate the orders table
 function fetchOrders() {
-  fetch('https://inventory-management-system-xtb4.onrender.com/api/orders')
+  fetch('https://inventory-management-system-xtb4.onrender.com/api/orders', {
+    headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+  })
     .then(response => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       return response.json();
@@ -100,7 +105,12 @@ function populateOrdersTable(orders) {
 // Load customers for the order modal
 async function loadCustomersForOrder() {
   try {
-    const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/customers');
+    const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/customers', {
+      headers: { 
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      },
+    });
     if (!response.ok) throw new Error('Failed to fetch customers');
     const customers = await response.json();
     const customerSelect = document.getElementById('orderCustomerSelect');
@@ -119,7 +129,12 @@ async function loadCustomersForOrder() {
 // Load products for the order modal (returns an array of products)
 async function loadProductsForOrder() {
   try {
-    const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/products');
+    const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/products', {
+      headers: { 
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      },
+    });
     if (!response.ok) throw new Error('Failed to fetch products');
     return await response.json();
   } catch (error) {
@@ -283,7 +298,11 @@ async function openOrderEditModal(button) {
 // Delete an order by its ID
 function deleteOrder(orderId) {
   if (!confirm('Are you sure you want to delete this order?')) return;
-  fetch(`https://inventory-management-system-xtb4.onrender.com/api/orders/${orderId}`, { method: 'DELETE' })
+  fetch(`https://inventory-management-system-xtb4.onrender.com/api/orders/${orderId}`, { method: 'DELETE', headers: { 
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    },
+   })
     .then(response => {
       if (!response.ok) throw new Error(`Failed to delete order with ID ${orderId}`);
       fetchOrders(); // Refresh orders table
@@ -320,7 +339,10 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
   if (editingOrder) {
     fetch(`https://inventory-management-system-xtb4.onrender.com/api/orders/${editingOrder.getAttribute('data-id')}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      },
       body: JSON.stringify(orderData)
     })
       .then(response => response.json())
@@ -332,7 +354,10 @@ document.getElementById('orderForm').addEventListener('submit', function(e) {
   } else {
     fetch('https://inventory-management-system-xtb4.onrender.com/api/orders', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      },
       body: JSON.stringify(orderData)
     })
       .then(response => response.json())
