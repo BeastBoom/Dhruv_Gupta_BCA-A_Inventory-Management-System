@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Save user ID in sessionStorage for the session
             sessionStorage.setItem("userId", data.user.id);
             // Redirect to dashboard
-            window.location.href = "../templates/dashboard.html";
+            window.location.href = "templates/dashboard.html";
           } else {
             alert("Invalid credentials.");
           }
