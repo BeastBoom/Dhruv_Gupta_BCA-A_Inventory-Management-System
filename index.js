@@ -164,6 +164,9 @@ app.post("/api/login", (req, res) => {
     return res
       .status(400)
       .json({ success: false, message: "Username and password are required." });
+}
+  username = username.trim();
+  password = password.trim();
   connection.query(
     "SELECT * FROM users WHERE username = ?",
     [username],
