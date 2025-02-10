@@ -25,12 +25,13 @@ const pool = mysql.createPool({
 
 
 // Connect to MySQL and create tables if they don't exist
-pool.connect((err) => {
+pool.query('Select 1',(err) => {
   if (err) {
     console.error('Error connecting to MySQL:', err);
     return;
+  } else {
+    console.log('Connected to MySQL database');
   }
-  console.log('Connected to MySQL database');
 
   // Create the users table
   pool.query(
