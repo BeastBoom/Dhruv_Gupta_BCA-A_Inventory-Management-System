@@ -19,113 +19,98 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD, // your MySQL password
   database: process.env.DB_DATABASE,
   waitForConnections:true,
-  connectionLimit:3,
+  connectionLimit:2,
   queueLimit:0,
 });
 
 
 // Connect to MySQL and create tables if they don't exist
-pool.query('Select 1',(err) => {
-  if (err) {
-    console.error('Error connecting to MySQL:', err);
-    return;
-  } else {
-    console.log('Connected to MySQL database');
+// Use promise wrapper for sequential queries
+async function initializeDatabase() {
+  try {
+    // Test connection
+    await pool.promise().query("SELECT 1");
+    console.log("Connected to MySQL database");
+
+    // Create the users table
+    await pool.promise().query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL
+      )
+    `);
+    console.log("Users table is ready");
+
+    // Create Products Table (with user_id)
+    await pool.promise().query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        quantity INT DEFAULT 0,
+        price DECIMAL(10,2) NOT NULL,
+        category_id INT DEFAULT NULL,
+        user_id INT NOT NULL
+      )
+    `);
+    console.log("Products table is ready");
+
+    // Create Categories Table (with user_id)
+    await pool.promise().query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        product_ids VARCHAR(255),
+        user_id INT NOT NULL
+      )
+    `);
+    console.log("Categories table is ready");
+
+    // Create Customers Table (with user_id)
+    await pool.promise().query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        customer_number VARCHAR(255) NOT NULL,
+        email VARCHAR(255),
+        user_id INT NOT NULL
+      )
+    `);
+    console.log("Customers table is ready");
+
+    // Create Orders Table (with user_id)
+    await pool.promise().query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        customer_id INT,
+        order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        order_value DECIMAL(10,2),
+        user_id INT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
+      )
+    `);
+    console.log("Orders table is ready");
+
+    // Create Order_items Table (with user_id)
+    await pool.promise().query(`
+      CREATE TABLE IF NOT EXISTS order_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT,
+        product_id INT,
+        quantity INT,
+        user_id INT NOT NULL,
+        FOREIGN KEY (order_id) REFERENCES orders(id),
+        FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    `);
+    console.log("Order_items table is ready");
+  } catch (err) {
+    console.error("Error initializing database:", err);
   }
+}
 
-  // Create the users table
-  pool.query(
-    `CREATE TABLE IF NOT EXISTS users (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      username VARCHAR(255) UNIQUE NOT NULL,
-      password VARCHAR(255) NOT NULL
-    )`,
-    (err) => {
-      if (err) console.error("Error creating users table:", err);
-      else console.log("Users table is ready");
-    }
-  );
-
-  // Products table (with user_id)
-  pool.query(
-    `CREATE TABLE IF NOT EXISTS products (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      quantity INT DEFAULT 0,
-      price DECIMAL(10,2) NOT NULL,
-      category_id INT DEFAULT NULL,
-      user_id INT NOT NULL
-    )`,
-    (err) => {
-      if (err) console.error("Error creating products table:", err);
-      else console.log("Products table is ready");
-    }
-  );
-
-  // Create Categories Table (with user_id)
-  pool.query(
-    `CREATE TABLE IF NOT EXISTS categories (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
-      description TEXT,
-      product_ids VARCHAR(255),
-      user_id INT NOT NULL
-    )`,
-    (err) => {
-      if (err) console.error("Error creating categories table:", err);
-      else console.log("Categories table is ready");
-    }
-  );
-
- // Create Customers Table (with user_id)
- pool.query(
-  `CREATE TABLE IF NOT EXISTS customers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    customer_number VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    user_id INT NOT NULL
-  )`,
-  (err) => {
-    if (err) console.error("Error creating customers table:", err);
-    else console.log("Customers table is ready");
-  }
-);
-
-
-  // Create Orders Table (with user_id)
-  pool.query(
-    `CREATE TABLE IF NOT EXISTS orders (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      customer_id INT,
-      order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-      order_value DECIMAL(10,2),
-      user_id INT NOT NULL,
-      FOREIGN KEY (customer_id) REFERENCES customers(id)
-    )`,
-    (err) => {
-      if (err) console.error("Error creating orders table:", err);
-      else console.log("Orders table is ready");
-    }
-  );
-
-  // Create Order_items Table (with user_id)
-  pool.query(
-    `CREATE TABLE IF NOT EXISTS order_items (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      order_id INT,
-      product_id INT,
-      quantity INT,
-      user_id INT NOT NULL,
-      FOREIGN KEY (order_id) REFERENCES orders(id),
-      FOREIGN KEY (product_id) REFERENCES products(id)
-    )`,
-    (err) => {
-      if (err) console.error("Error creating order_items table:", err);
-      else console.log("Order_items table is ready");
-    }
-  );
-});
+initializeDatabase();
 
 /* --------------------
    AUTHENTICATION ENDPOINTS
