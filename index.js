@@ -13,7 +13,7 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-const pool = mysql.createpool({
+const pool = mysql.createPool({
   host: process.env.DB_HOST, // or your MySQL host
   user: process.env.DB_USER,      // your MySQL username
   password: process.env.DB_PASSWORD, // your MySQL password
