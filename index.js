@@ -13,16 +13,19 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-const connection = mysql.createConnection({
+const pool = mysql.createpool({
   host: process.env.DB_HOST, // or your MySQL host
   user: process.env.DB_USER,      // your MySQL username
   password: process.env.DB_PASSWORD, // your MySQL password
-  database: process.env.DB_DATABASE, // your database name
+  database: process.env.DB_DATABASE,
+  waitForConnections:true,
+  connectionLimit:10,
+  queueLimit:0,
 });
 
 
 // Connect to MySQL and create tables if they don't exist
-connection.connect((err) => {
+pool.connect((err) => {
   if (err) {
     console.error('Error connecting to MySQL:', err);
     return;
@@ -30,7 +33,7 @@ connection.connect((err) => {
   console.log('Connected to MySQL database');
 
   // Create the users table
-  connection.query(
+  pool.query(
     `CREATE TABLE IF NOT EXISTS users (
       id INT AUTO_INCREMENT PRIMARY KEY,
       username VARCHAR(255) UNIQUE NOT NULL,
@@ -43,7 +46,7 @@ connection.connect((err) => {
   );
 
   // Products table (with user_id)
-  connection.query(
+  pool.query(
     `CREATE TABLE IF NOT EXISTS products (
       id INT AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -59,7 +62,7 @@ connection.connect((err) => {
   );
 
   // Create Categories Table (with user_id)
-  connection.query(
+  pool.query(
     `CREATE TABLE IF NOT EXISTS categories (
       id INT AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -74,7 +77,7 @@ connection.connect((err) => {
   );
 
  // Create Customers Table (with user_id)
- connection.query(
+ pool.query(
   `CREATE TABLE IF NOT EXISTS customers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -90,7 +93,7 @@ connection.connect((err) => {
 
 
   // Create Orders Table (with user_id)
-  connection.query(
+  pool.query(
     `CREATE TABLE IF NOT EXISTS orders (
       id INT AUTO_INCREMENT PRIMARY KEY,
       customer_id INT,
@@ -106,7 +109,7 @@ connection.connect((err) => {
   );
 
   // Create Order_items Table (with user_id)
-  connection.query(
+  pool.query(
     `CREATE TABLE IF NOT EXISTS order_items (
       id INT AUTO_INCREMENT PRIMARY KEY,
       order_id INT,
@@ -141,7 +144,7 @@ app.post("/api/signup", (req, res) => {
         .status(500)
         .json({ success: false, message: "Server error." });
     }
-    connection.query(
+    pool.query(
       "INSERT INTO users (username, password) VALUES (?, ?)",
       [username, hash],
       (err, result) => {
@@ -166,7 +169,7 @@ app.post("/api/login", (req, res) => {
   username = username.trim();
   password = password.trim();
 
-  connection.query(
+  pool.query(
     "SELECT * FROM users WHERE username = ?",
     [username],
     (err, results) => {
@@ -196,11 +199,11 @@ app.post("/api/login", (req, res) => {
 
 // Helper function to renumber products (if desired)
 function renumberProducts(callback) {
-  connection.query('SET @count = 0', (err) => {
+  pool.query('SET @count = 0', (err) => {
     if (err) return callback(err);
-    connection.query('UPDATE products SET id = (@count:=@count + 1) ORDER BY id', (err) => {
+    pool.query('UPDATE products SET id = (@count:=@count + 1) ORDER BY id', (err) => {
       if (err) return callback(err);
-      connection.query('ALTER TABLE products AUTO_INCREMENT = 1', callback);
+      pool.query('ALTER TABLE products AUTO_INCREMENT = 1', callback);
     });
   });
 }
@@ -221,7 +224,7 @@ function requireUser(req, res, next) {
 /* ---------- PRODUCTS API ---------- */
 app.get('/api/products', requireUser, (req, res) => {
   const userId = req.userId;
-  connection.query(
+  pool.query(
     `SELECT p.*, c.name AS category_name 
      FROM products p 
      LEFT JOIN categories c ON p.category_id = c.id WHERE p.user_id = ?`,[userId],
@@ -239,7 +242,7 @@ app.post('/api/products', requireUser, (req, res) => {
   const userId = req.userId;
   const { name, quantity, price, category_id } = req.body;
   if (isNaN(price)) return res.status(400).send('Price must be a valid number');
-  connection.query(
+  pool.query(
     'INSERT INTO products (name, quantity, price, category_id, user_id) VALUES (?, ?, ?, ?, ?)',
     [name, quantity, price, category_id || null, userId],
     (err) => {
@@ -252,7 +255,7 @@ app.post('/api/products', requireUser, (req, res) => {
           console.error('Error renumbering products:', err);
           return res.status(500).send('Error renumbering products');
         }
-        connection.query(
+        pool.query(
           'SELECT p.*, c.name AS category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.user_id = ? ORDER BY p.id DESC LIMIT 1',[userId],
           (err, rows) => {
             if (err) {
@@ -271,7 +274,7 @@ app.put('/api/products/:id', requireUser,(req, res) => {
   const userId = req.userId;
   const { id } = req.params;
   const { name, quantity, price, category_id } = req.body;
-  connection.query(
+  pool.query(
     'UPDATE products SET name = ?, quantity = ?, price = ?, category_id = ? WHERE id = ? AND user_id = ?',
     [name, quantity, price, category_id || null, id, userId],
     (err, results) => {
@@ -291,7 +294,7 @@ app.delete('/api/products/:id', requireUser, (req, res) => {
   const { id } = req.params;
 
   // First, delete any order_items referencing this product for this user
-  connection.query(
+  pool.query(
     'DELETE FROM order_items WHERE product_id = ? AND user_id = ?',
     [id, userId],
     (err, orderItemsResult) => {
@@ -301,7 +304,7 @@ app.delete('/api/products/:id', requireUser, (req, res) => {
       }
 
       // Now, delete the product itself
-      connection.query(
+      pool.query(
         'DELETE FROM products WHERE id = ? AND user_id = ?',
         [id, userId],
         (err, productResult) => {
@@ -330,7 +333,7 @@ app.delete('/api/products/:id', requireUser, (req, res) => {
 /* ---------- CATEGORIES API ---------- */
 app.get('/api/categories', requireUser, (req, res) => {
   const userId = req.userId;
-  connection.query(
+  pool.query(
     `SELECT 
        c.id AS category_id, 
        c.name AS category_name, 
@@ -366,7 +369,7 @@ app.get('/api/categories', requireUser, (req, res) => {
 app.post('/api/categories', requireUser, (req, res) => {
   const userId = req.userId;
   const { name, description, product_ids } = req.body;
-  connection.query(
+  pool.query(
     'INSERT INTO categories (name, description, product_ids, user_id) VALUES (?, ?, ?, ?)',
     [name, description, product_ids, userId],
     (err, insertResult) => {
@@ -374,7 +377,7 @@ app.post('/api/categories', requireUser, (req, res) => {
         console.error('Error adding category:', err);
         return res.status(500).send('Error adding category');
       }
-      connection.query('SELECT * FROM categories WHERE id = ? AND user_id = ?', [insertResult.insertId], (err, rows) => {
+      pool.query('SELECT * FROM categories WHERE id = ? AND user_id = ?', [insertResult.insertId], (err, rows) => {
         if (err) {
           console.error('Error fetching category:', err);
           return res.status(500).send('Error fetching category');
@@ -389,7 +392,7 @@ app.put('/api/categories/:id', requireUser, (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
   const { name, description, product_ids } = req.body;
-  connection.query(
+  pool.query(
     'UPDATE categories SET name = ?, description = ?, product_ids = ? WHERE id = ? AND user_id = ?',
     [name, description, product_ids, id, userId],
     (err, updateResult) => {
@@ -406,7 +409,7 @@ app.put('/api/categories/:id', requireUser, (req, res) => {
 app.delete('/api/categories/:id',  requireUser, (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
-  connection.query('DELETE FROM categories WHERE id = ? AND user_id = ?', [id, userId], (err, deleteResult) => {
+  pool.query('DELETE FROM categories WHERE id = ? AND user_id = ?', [id, userId], (err, deleteResult) => {
     if (err) {
       console.error('Error deleting category:', err);
       return res.status(500).send('Error deleting category');
@@ -420,7 +423,7 @@ app.delete('/api/categories/:id',  requireUser, (req, res) => {
 // Get all customers
 app.get('/api/customers', requireUser, (req, res) => {
   const userId = req.userId;
-  connection.query(
+  pool.query(
     `SELECT 
        cu.id,
        cu.name,
@@ -445,7 +448,7 @@ app.post("/api/customers", requireUser, (req, res) => {
   if (!name || !customer_number) {
     return res.status(400).send("Name and Customer Number are required");
   }
-  connection.query(
+  pool.query(
     "INSERT INTO customers (name, customer_number, email, user_id) VALUES (?, ?, ?, ?)",
     [name, customer_number, email || null, userId],
     (err, insertResult) => {
@@ -453,7 +456,7 @@ app.post("/api/customers", requireUser, (req, res) => {
         console.error("Error adding customer:", err);
         return res.status(500).send("Error adding customer");
       }
-      connection.query(
+      pool.query(
         "SELECT * FROM customers WHERE id = ? AND user_id = ?",
         [insertResult.insertId, userId],
         (err, rows) => {
@@ -476,7 +479,7 @@ app.put("/api/customers/:id", requireUser, (req, res) => {
   if (!name || !customer_number) {
     return res.status(400).send("Name and Customer Number are required");
   }
-  connection.query(
+  pool.query(
     "UPDATE customers SET name = ?, customer_number = ?, email = ? WHERE id = ? AND user_id = ?",
     [name, customer_number, email || null, id, userId],
     (err, updateResult) => {
@@ -496,7 +499,7 @@ app.put("/api/customers/:id", requireUser, (req, res) => {
 app.delete("/api/customers/:id", requireUser, (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
-  connection.query(
+  pool.query(
     "DELETE FROM customers WHERE id = ? AND user_id = ?",
     [id, userId],
     (err, deleteResult) => {
@@ -514,7 +517,7 @@ app.delete("/api/customers/:id", requireUser, (req, res) => {
 /* ---------- ORDERS API ---------- */
 app.get("/api/orders", requireUser, (req, res) => {
   const userId = req.userId;
-  connection.query(
+  pool.query(
     `SELECT 
        o.id AS order_id, 
        o.order_date, 
@@ -563,7 +566,7 @@ app.post("/api/orders", requireUser, (req, res) => {
   if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).send("Invalid order data");
   }
-  connection.query(
+  pool.query(
     "INSERT INTO orders (customer_id, user_id) VALUES (?, ?)",
     [customer_id, userId],
     (err, orderResult) => {
@@ -573,7 +576,7 @@ app.post("/api/orders", requireUser, (req, res) => {
       }
       const orderId = orderResult.insertId;
       const orderItemsData = items.map((item) => [orderId, item.product_id, item.quantity, userId]);
-      connection.query(
+      pool.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ?",
         [orderItemsData],
         (err) => {
@@ -581,7 +584,7 @@ app.post("/api/orders", requireUser, (req, res) => {
             console.error("Error adding order items:", err);
             return res.status(500).send("Error adding order items");
           }
-          connection.query(
+          pool.query(
             `UPDATE orders SET order_value = (
               SELECT SUM(p.price * oi.quantity)
               FROM order_items oi
@@ -594,7 +597,7 @@ app.post("/api/orders", requireUser, (req, res) => {
                 console.error("Error updating order value:", err);
                 return res.status(500).send("Error updating order value");
               }
-              connection.query(
+              pool.query(
                 `SELECT 
                    o.id AS order_id, 
                    o.order_date, 
@@ -642,7 +645,7 @@ app.put("/api/orders/:id", requireUser, (req, res) => {
   if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).send("Invalid order data");
   }
-  connection.query(
+  pool.query(
     "UPDATE orders SET customer_id = ? WHERE id = ? AND user_id = ?",
     [customer_id, id, userId],
     (err, result) => {
@@ -651,13 +654,13 @@ app.put("/api/orders/:id", requireUser, (req, res) => {
         return res.status(500).send("Error updating order");
       }
       if (result.affectedRows === 0) return res.status(404).send("Order not found");
-      connection.query("DELETE FROM order_items WHERE order_id = ? AND user_id = ?", [id, userId], (err) => {
+      pool.query("DELETE FROM order_items WHERE order_id = ? AND user_id = ?", [id, userId], (err) => {
         if (err) {
           console.error("Error deleting order items:", err);
           return res.status(500).send("Error deleting order items");
         }
         const orderItemsData = items.map((item) => [id, item.product_id, item.quantity, userId]);
-        connection.query(
+        pool.query(
           "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ?",
           [orderItemsData],
           (err) => {
@@ -665,7 +668,7 @@ app.put("/api/orders/:id", requireUser, (req, res) => {
               console.error("Error adding order items:", err);
               return res.status(500).send("Error adding order items");
             }
-            connection.query(
+            pool.query(
               `UPDATE orders SET order_value = (
                 SELECT SUM(p.price * oi.quantity)
                 FROM order_items oi
@@ -678,7 +681,7 @@ app.put("/api/orders/:id", requireUser, (req, res) => {
                   console.error("Error updating order value:", err);
                   return res.status(500).send("Error updating order value");
                 }
-                connection.query(
+                pool.query(
                   `SELECT 
                      o.id AS order_id, 
                      o.order_date, 
@@ -722,12 +725,12 @@ app.put("/api/orders/:id", requireUser, (req, res) => {
 app.delete("/api/orders/:id", requireUser, (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
-  connection.query("DELETE FROM order_items WHERE order_id = ? AND user_id = ?", [id, userId], (err) => {
+  pool.query("DELETE FROM order_items WHERE order_id = ? AND user_id = ?", [id, userId], (err) => {
     if (err) {
       console.error("Error deleting order items:", err);
       return res.status(500).send("Error deleting order items");
     }
-    connection.query("DELETE FROM orders WHERE id = ? AND user_id = ?", [id, userId], (err, result) => {
+    pool.query("DELETE FROM orders WHERE id = ? AND user_id = ?", [id, userId], (err, result) => {
       if (err) {
         console.error("Error deleting order:", err);
         return res.status(500).send("Error deleting order");
