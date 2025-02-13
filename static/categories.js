@@ -197,3 +197,4 @@ document.addEventListener("DOMContentLoaded", () => {
   // Fetch categories on page load
   document.addEventListener('DOMContentLoaded', fetchCategories);
 })();
+

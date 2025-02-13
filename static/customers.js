@@ -3,6 +3,7 @@
 // Fetch customers on page load
 document.addEventListener('DOMContentLoaded', fetchCustomers);
 
+
 async function fetchCustomers() {
   try {
     const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/customers', {

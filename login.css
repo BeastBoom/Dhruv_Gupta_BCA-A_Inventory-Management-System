@@ -1,0 +1,573 @@
+body {
+  background-image: url(background.png);
+  animation: bg-scrolling-reverse 1s infinite;
+  animation-timing-function: linear;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+  color: white;
+  margin-top: -10px;
+}
+@keyframes bg-scrolling-reverse {
+  100% {
+    background-position: 50px 50px;
+  }
+}
+.head {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  /* font-style: italic; */
+  color: white;
+  text-align: center;
+}
+
+.head hr {
+  height: 3px;
+  width: 200px;
+  margin-top: -20px;
+  border-radius: 25px;
+  background-color: white;
+}
+
+.container {
+  width: 500px;
+  height: 600px;
+  margin: 10px auto;
+  color: white;
+}
+.text {
+  padding-top: 35px;
+  margin: 0 0 0 50px;
+  width: 190px;
+}
+.text p {
+  padding: 5px 0px;
+  margin: 0;
+}
+
+.signup{
+  padding-top: 30px;
+  padding-left: 55px;
+}
+
+#page{
+  color: aqua;
+    text-decoration: none;
+}
+
+
+
+.glass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0)
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  height: 540px;
+}
+
+.box-input {
+  position: relative;
+  margin: 8px 50px;
+}
+
+.border {
+  background-color: #ffffff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 4px;
+  max-width: 250px;
+  margin: -50px 0 20px 180px;
+  border-radius: 30px;
+  height: 45px;
+}
+
+.input {
+  background-color: #212121;
+  width: 182px;
+  height: 45px;
+  padding: 0 19px 0 10px;
+  font-size: 1.1em;
+  position: relative;
+  border: none;
+  color: white;
+  outline: 0;
+  overflow: hidden;
+  border-radius: 30px;
+}
+
+.input::placeholder {
+  transition: all 0.7s ease-in, transform 0.4s ease-in 0.7s;
+}
+
+.input:focus::placeholder {
+  padding-left: 100px;
+  transform: translateY(-50px);
+}
+
+#navbody {
+  margin: -50px 0 0 230px;
+  padding-top: 8px;
+  width: 170px;
+  height: 45px;
+  background-color: rgba(216, 214, 214, 0.984);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 40px;
+  box-shadow: 0px 10px 15px rgba(0, 0, 0, 0.041);
+  align-items: center;
+  justify-content: center;
+  display: flex;
+}
+
+.ul {
+  list-style: none;
+  width:100px;
+  background-color: transparent;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  padding-left: 0px;
+  margin-left: -60px;
+}
+
+.ul .li {
+  display: inline-block;
+}
+
+.radio {
+  display: none;
+}
+
+i {
+  opacity: 80%;
+  cursor: pointer;
+  padding: 13px 20px;
+  transition: 0.2s;
+}
+
+.ul .li i:hover {
+  transition: 0.1s;
+  color: rgb(235, 40, 176) !important;
+  position: relative;
+  margin-top: -4px;
+  opacity: 100%;
+}
+
+.radio:checked + label .li i {
+  color: rgb(235, 40, 176) !important;
+  fill-rule: evenodd;
+}
+
+
+.Male,.Female,.Others{
+  position: absolute;
+  color: rgb(235, 40, 176);
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+  margin: 40px 0 0 -52px;
+  transition: all 0.5s ease-in-out;
+  background-color: white;
+  padding: 5px;
+  border-radius: 20px;
+}
+.Female {
+  margin: 40px 0 0 -60px;
+}
+.Others {
+  margin: 40px 0 0 -60px;
+}
+.Male::before,.Female::before,.Others::before {
+  content: "";
+  position: absolute;
+  border: 13px solid white;
+  transform: translateX(-50%) rotate(45deg);
+  left: 50%;
+  z-index: -1;
+  margin-top: -10px;
+}
+
+.li:hover .Male, .li:hover .Female, .li:hover .Others { 
+  position: absolute;
+  opacity: 1; 
+  pointer-events: auto; 
+}
+
+.select-box {
+  width: 210px;
+  appearance: none;
+}
+
+.box-input .icon {
+  position: absolute;
+  margin: -68px 7px 0 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(128, 128, 128, 0.432);
+  height: 43px;
+  width: 40px;
+  border-radius: 20px 30px 30px 20px; 
+}
+
+.gender {
+  margin-top: 25px;
+}
+
+ 
+/* Hide the default checkbox */
+.checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+ }
+
+.check {
+  margin: -30px 240px 0 240px;
+}
+ 
+ .checkbox {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  font-size: 25px;
+  user-select: none;
+ }
+
+ .check2 {
+  margin-top: 30px;
+ }
+ 
+ /* Create a custom checkbox */
+ .checkmark {
+  position: relative;
+  top: 0;
+  left: 0;
+  height: 1em;
+  width: 1em;
+  background: white;
+  border-radius: 50px;
+  transition: all 0.7s;
+  --spread: 20px;
+ }
+ 
+ /* When the checkbox is checked, add a blue background */
+ .checkbox input:checked ~ .checkmark {
+  background: white;
+  box-shadow: -5px -5px var(--spread) 0px #5B51D8, 0 -5px var(--spread) 0px #833AB4, 5px -5px var(--spread) 0px #E1306C, 5px 0 var(--spread) 0px #FD1D1D, 5px 5px var(--spread) 0px #F77737, 0 5px var(--spread) 0px #FCAF45, -5px 5px var(--spread) 0px #FFDC80;
+ }
+ 
+ /* Create the checkmark/indicator (hidden when not checked) */
+ .checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+ }
+ 
+ /* Show the checkmark when checked */
+ .checkbox input:checked ~ .checkmark:after {
+  display: block;
+ }
+ 
+ /* Style the checkmark/indicator */
+ .checkbox .checkmark:after {
+  left: 0.35em;
+  top: 0.18em;
+  width: 0.20em;
+  height: 0.4em;
+  border: solid black;
+  border-width: 0 0.15em 0.15em 0;
+  transform: rotate(45deg);
+ }
+
+.checktext{
+  font-size: 18px;
+  margin: -100px 0 0 280px;
+}
+.updates {
+  margin-top: 30px;
+}
+
+.tex {
+  background-color: #ffffff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 4px;
+  max-width: 193px;
+  margin: -42px 0 20px 250px;
+  border-radius: 30px;
+  height: 45px;
+}
+
+button {
+  border: none;
+  width: 200px;
+  height: 50px;
+  color: #fff;
+  z-index: 1;
+  display: flex;
+  background: #000;
+  position: relative;
+  cursor: pointer;
+  
+  margin: auto;
+  border-radius: 15px; 
+}
+
+button p {
+  margin: auto;
+  font-size: 17px;
+  font-weight: bold;
+  justify-content: center;
+}
+
+.login{
+  padding-top: 30px;
+}
+
+button::after {
+  position: absolute;
+  content: "";
+  width: 100%;
+  z-index: -1;
+  height: 10%;
+  bottom: 0;
+  clip-path: polygon(
+    0% 74%,
+    4% 75%,
+    8% 76%,
+    11% 77%,
+    15% 78%,
+    20% 78%,
+    25% 77%,
+    32% 77%,
+    37% 75%,
+    40% 74%,
+    43% 74%,
+    46% 73%,
+    52% 72%,
+    57% 72%,
+    65% 74%,
+    66% 75%,
+    71% 78%,
+    75% 82%,
+    81% 86%,
+    83% 88%,
+    88% 91%,
+    90% 94%,
+    94% 96%,
+    98% 98%,
+    100% 100%,
+    82% 100%,
+    0 100%
+  );
+  background: rgb(169, 46, 132);
+  transition: 0.2s ease;
+  border-radius: 15px; /* Added border radius */
+}
+
+button::before {
+  position: absolute;
+  content: "";
+  transform: rotate(180deg);
+  width: 100%;
+  height: 10%;
+  transition: 0.2s ease;
+  z-index: -1;
+  clip-path: polygon(
+    0% 74%,
+    4% 75%,
+    8% 76%,
+    11% 77%,
+    15% 78%,
+    20% 78%,
+    25% 77%,
+    32% 77%,
+    37% 75%,
+    40% 74%,
+    43% 74%,
+    46% 73%,
+    52% 72%,
+    57% 72%,
+    65% 74%,
+    66% 75%,
+    71% 78%,
+    75% 82%,
+    81% 86%,
+    83% 88%,
+    88% 91%,
+    90% 94%,
+    94% 96%,
+    98% 98%,
+    100% 100%,
+    82% 100%,
+    0 100%
+  );
+  background: rgb(169, 46, 132);
+  border-radius: 15px; /* Added border radius */
+}
+
+button:hover::after {
+  clip-path: polygon(
+    0 30%,
+    9% 34%,
+    7% 39%,
+    11% 43%,
+    13% 33%,
+    17% 30%,
+    24% 34%,
+    25% 35%,
+    30% 31%,
+    30% 38%,
+    39% 33%,
+    35% 43%,
+    43% 45%,
+    55% 46%,
+    65% 74%,
+    67% 66%,
+    81% 57%,
+    75% 82%,
+    81% 86%,
+    83% 88%,
+    88% 91%,
+    90% 94%,
+    94% 96%,
+    98% 98%,
+    100% 100%,
+    82% 100%,
+    0 100%
+  );
+  height: 80%;
+  border-radius: 15px; /* Added border radius */
+}
+
+button:hover::before {
+  clip-path: polygon(
+    0 30%,
+    9% 34%,
+    7% 39%,
+    11% 43%,
+    13% 33%,
+    17% 30%,
+    24% 34%,
+    25% 35%,
+    30% 31%,
+    30% 38%,
+    39% 33%,
+    35% 43%,
+    43% 45%,
+    55% 46%,
+    65% 74%,
+    67% 66%,
+    81% 57%,
+    75% 82%,
+    81% 86%,
+    83% 88%,
+    88% 91%,
+    90% 94%,
+    94% 96%,
+    98% 98%,
+    100% 100%,
+    82% 100%,
+    0 100%
+  );
+  height: 80%;
+  border-radius: 15px; /* Added border radius */
+}
+
+.button {
+  margin: -50px 0 0 270px;
+  
+}
+
+.user,.pass,.email,.passconfirm {
+  position: absolute;
+  z-index: 1;
+  font-size: 12px;
+}
+.user {
+  margin: -588px 0 0 253px;
+  width: 140px;
+}
+
+.pass {
+  margin: -545px 0 0 220px;
+  width: 175px;
+  background-color: white;
+  color: black;
+  padding: 5px;
+  border-radius: 20px;
+  opacity: 0;
+}
+
+.error {
+  width: 155px;
+}
+
+.email {
+  margin: -392px 0 0 220px;
+  width: 173px;
+  background-color: white;
+  color: black;
+  padding: 5px;
+  border-radius: 20px;
+  opacity: 0;
+}
+
+.passconfirm {
+  margin: -433px 0 0 422px;
+  width: 160px;
+}
+
+#usernameError {
+  border: 2px solid;
+  border-radius: 15px;
+  padding: 5px;
+  background-color: white;
+  color: black;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+}
+
+#usernameError::before{
+  content: "";
+  position: absolute;
+  border: 8px solid white;
+  transform: translateX(-50%) rotate(45deg);
+  left: 96%;
+  top: 60%;
+  z-index: -1;
+  margin-top: -10px;
+}
+
+#passwordError::before {
+  content: "";
+  position: absolute;
+  border: 8px solid white;
+  transform: translateX(-50%) rotate(45deg);
+  left: 98%;
+  top: 50%;
+  z-index: -1;
+  margin-top: -10px;
+}
+
+#emailError::before{
+  content: "";
+  position: absolute;
+  border: 8px solid white;
+  transform: translateX(-50%) rotate(45deg);
+  left: 96%;
+  top: 60%;
+  z-index: -1;
+  margin-top: -10px;
+}

@@ -13,12 +13,13 @@ body {
   }
   
   body.dark-theme .sidebar {
-    background-color: #1f1f1f;
-  }
-  
-  body.dark-theme .main-content {
-    background-color: #1f1f1f;
-  }
+    background-color: #0d0707;
+}
+
+body.dark-theme .main-content {
+    background-color: #111010;
+}
+
   
   /* Product Management Styles */
   .product-management {
@@ -218,60 +219,68 @@ body {
   }
 
   /* Sidebar Styles */
+#logo-image {
+  height: 65px;
+  display: block;
+  margin: 10px auto;
+}
+
 .sidebar {
-    width: 60px;
-    height: 100vh;
-    background-color: #333;
-    color: white;
-    position: fixed;
-    transition: width 0.3s;
-    overflow: hidden;
+  width: 63px;
+  height: 100vh;
+  background-color: #333;
+  color: white;
+  position: fixed;
+  transition: width 0.3s;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .sidebar.expanded {
-    width: 200px;
+  width: 200px;
 }
 
-.sidebar .logo {
-    padding: 20px;
-    font-size: 20px;
-    font-weight: bold;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
+.sidebar-logo {
+  padding: 10px 0;
+  text-align: center;
 }
 
 .sidebar ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
 }
 
 .sidebar ul li {
-    padding: 15px;
-    text-align: left;
-    white-space: nowrap;
+  padding: 15px;
+  text-align: left;
+  white-space: nowrap;
 }
 
 .sidebar ul li a {
-    color: white;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
 }
 
 .sidebar ul li a span {
-    margin-right: 10px;
+  margin-right: 10px;
 }
 
-/* Sidebar Styles */
+
+/* Hide menu text by default */
 .sidebar ul li a .menu-text {
-    display: none; /* Hide text by default */
-    margin-left: 10px;
+  display: none;
+  margin-left: 10px;
 }
 
+/* Show menu text when sidebar is expanded */
 .sidebar.expanded ul li a .menu-text {
-    display: inline; /* Show text when sidebar is expanded */
+  display: inline;
 }
 
 .menu-toggle {
