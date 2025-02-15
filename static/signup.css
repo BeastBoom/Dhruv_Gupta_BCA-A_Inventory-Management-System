@@ -1,7 +1,9 @@
 body {
     background-image: url(background.png);
-    animation: bg-scrolling-reverse 1s infinite;
-    animation-timing-function: linear;
+    animation: bg-scrolling-reverse 1s infinite; 
+     animation-timing-function: linear;
+
+    background-color: #000;
     font-family: "Poppins", sans-serif;
     font-weight: 700;
     font-style: normal;
@@ -370,7 +372,7 @@ body {
       82% 100%,
       0 100%
     );
-    background: rgb(169, 46, 132);
+    background: rgb(119,11,11);
     transition: 0.2s ease;
     border-radius: 15px; /* Added border radius */
   }
@@ -412,7 +414,7 @@ body {
       82% 100%,
       0 100%
     );
-    background: rgb(169, 46, 132);
+    background: rgb(119,11,11);
     border-radius: 15px; /* Added border radius */
   }
   
