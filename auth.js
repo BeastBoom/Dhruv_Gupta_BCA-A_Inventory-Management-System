@@ -36,67 +36,66 @@ document.addEventListener("DOMContentLoaded", () => {
   if (signupForm) {
     signupForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      
-      // Get the form values
-      const emailEl = document.getElementById("signup-email").value.trim();
-      const usernameEl = document.getElementById("signup-username").value.trim();
-      const passwordEl = document.getElementById("signup-password").value;
-      const confirmPasswordEl = document.getElementById("signup-confirm-password").value;
-      
-       // Check that all input elements exist
-       if (!usernameEl || !emailEl || !passwordEl || !confirmPasswordEl) {
+
+      // Retrieve input elements
+      const usernameEl = document.getElementById("signup-username");
+      const emailEl = document.getElementById("signup-email");
+      const passwordEl = document.getElementById("signup-password");
+      const confirmPasswordEl = document.getElementById("signup-confirm-password");
+
+      // Check that all elements exist
+      if (!usernameEl || !emailEl || !passwordEl || !confirmPasswordEl) {
         alert("One or more signup fields are missing. Please refresh the page.");
         return;
       }
 
-      // Retrieve and trim values
+      // Get values and trim where necessary
       const username = usernameEl.value.trim();
       const email = emailEl.value.trim();
       const password = passwordEl.value;
       const confirmPassword = confirmPasswordEl.value;
 
-      // Username: not empty and at least 3 characters
+      // Validate username: must be at least 3 characters
       if (username.length < 3) {
-        alert("Username is required and must be at least 3 characters long.");
+        alert("Username must be at least 3 characters long.");
         return;
       }
 
-      // Email validation using a simple regex
+      // Validate email using regex
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         alert("Please enter a valid email address.");
         return;
       }
 
-      // Password validation: Minimum 8 characters, at least one uppercase, one lowercase, one digit, and one special character.
+      // Validate password: Minimum 8 characters, at least one uppercase, one lowercase, one digit, and one special character
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
       if (!passwordRegex.test(password)) {
-        alert("Password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character.");
+        alert("Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a digit, and a special character.");
         return;
       }
 
-      // Confirm password check
+      // Validate confirm password matches
       if (password !== confirmPassword) {
-        alert("Password and Confirm Password do not match.");
+        alert("Passwords do not match.");
         return;
       }
 
-      console.log("Signup form submitted with:", username, email);
-
-      // Send the signup request to the backend (without confirmPassword)
-      fetch("https://inventory-management-system-xtb4.onrender.com/api/signup", {
+      // All validations passed; send signup request to backend
+      fetch("https://your-api-domain.com/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, password }),
       })
         .then((res) => {
-          console.log("Signup response status:", res.status);
+          if (!res.ok) {
+            throw new Error(`HTTP error! Status: ${res.status}`);
+          }
           return res.json();
         })
         .then((data) => {
-          console.log("Signup response data:", data);
           if (data.success) {
-            // Redirect to login page after successful signup
+            alert("Signup successful! Please log in.");
             window.location.href = "index.html";
           } else {
             alert("Signup failed: " + data.message);
