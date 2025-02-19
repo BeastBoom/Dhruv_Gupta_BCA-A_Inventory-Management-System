@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // All validations passed; send signup request to backend
-      fetch("https://your-api-domain.com/api/signup", {
+      fetch("https://inventory-management-system-xtb4.onrender.com/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, password }),
