@@ -37,7 +37,8 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL
+        password VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL
       )
     `);
     console.log("Users table is ready");
@@ -118,14 +119,33 @@ initializeDatabase();
 
 // Signup Endpoint
 app.post("/api/signup", async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password)
-    return res.status(400).json({ success: false, message: "Username and password are required." });
+  const { username, email, password } = req.body;
+  if (!username || !email || !password) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Username, email, and password are required." });
+  }
+
+  // Basic server-side email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ success: false, message: "Invalid email format." });
+  }
+
+  // Password validation: Minimum 8 characters, with uppercase, lowercase, digit, special character
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character."
+    });
+  }
+
   try {
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username",
-      [username, hash]
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email",
+      [username, email, hash]
     );
     res.json({ success: true, user: result.rows[0] });
   } catch (err) {
@@ -133,6 +153,7 @@ app.post("/api/signup", async (req, res) => {
     res.status(500).json({ success: false, message: "Signup failed." });
   }
 });
+
 
 // Login Endpoint
 app.post("/api/login", async (req, res) => {
