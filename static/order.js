@@ -243,13 +243,14 @@ function recalcTotal() {
 
 // Open order modal for adding a new order
 function openOrderModal() {
-  document.getElementById('orderForm').reset();
-  document.getElementById('orderItemsContainer').innerHTML = '';
+  editingOrder = null; // Reset editing flag
+  document.getElementById("orderModalTitle").textContent = "Add New Order";
+  document.getElementById("orderForm").reset();
+  document.getElementById("orderItemsContainer").innerHTML = "";
   recalcTotal();
   loadCustomersForOrder();
-  // Add one default order item row
   addOrderItemRow();
-  document.getElementById('orderModal').style.display = 'block';
+  document.getElementById("orderModal").style.display = "block";
 }
 
 // Close the order modal
@@ -260,28 +261,30 @@ function closeOrderModal() {
 
 // Open order modal for editing an existing order and preselect values
 async function openOrderEditModal(button) {
-  const row = button.closest('tr');
-  const customerId = row.getAttribute('data-customer-id') || '';
-  const orderDateRaw = row.getAttribute('data-order-date') || '';
-  // Check for both "id" and "product_id" in products data
-  const productsData = row.getAttribute('data-products') ? JSON.parse(row.getAttribute('data-products')) : [];
-  
-  // Load customers and set the customer dropdown
+  const row = button.closest("tr");
+  editingOrder = row; // Set the global flag for editing
+
+  // Set modal heading to "Edit Order"
+  document.getElementById("orderModalTitle").textContent = "Edit Order";
+
+  // Prepopulate the form with data from the row
+  const customerId = row.getAttribute("data-customer-id") || "";
+  const orderDateRaw = row.getAttribute("data-order-date") || "";
+  const productsData = row.getAttribute("data-products") ? JSON.parse(row.getAttribute("data-products")) : [];
+
   await loadCustomersForOrder();
-  document.getElementById('orderCustomerSelect').value = customerId;
+  document.getElementById("orderCustomerSelect").value = customerId;
   
-  // Prepopulate order date field
   if (orderDateRaw) {
-    const formattedDate = new Date(orderDateRaw).toISOString().split('T')[0];
-    document.getElementById('orderDate').value = formattedDate;
+    const formattedDate = new Date(orderDateRaw).toISOString().split("T")[0];
+    document.getElementById("orderDate").value = formattedDate;
   }
   
-  // Clear and prepopulate the order items container
-  const itemsContainer = document.getElementById('orderItemsContainer');
-  itemsContainer.innerHTML = '';
+  const itemsContainer = document.getElementById("orderItemsContainer");
+  itemsContainer.innerHTML = "";
   if (productsData.length > 0) {
     for (const item of productsData) {
-      // Use either item.id or item.product_id if available
+      // Use either item.id or item.product_id
       const prodId = item.id || item.product_id;
       const quantity = item.quantity;
       await addOrderItemRow(prodId, quantity);
@@ -290,10 +293,9 @@ async function openOrderEditModal(button) {
     await addOrderItemRow();
   }
   recalcTotal();
-  
-  editingOrder = row;
-  document.getElementById('orderModal').style.display = 'block';
+  document.getElementById("orderModal").style.display = "block";
 }
+
 
 // Delete an order by its ID
 function deleteOrder(orderId) {
@@ -311,7 +313,7 @@ function deleteOrder(orderId) {
 }
 
 // Order form submission handler
-document.getElementById("orderForm").addEventListener("submit", function(e) {
+document.getElementById("orderForm").addEventListener("submit", function (e) {
   e.preventDefault();
   
   const customer_id = document.getElementById("orderCustomerSelect").value;
@@ -337,29 +339,57 @@ document.getElementById("orderForm").addEventListener("submit", function(e) {
   
   const orderData = { customer_id, items };
 
-  fetch("https://inventory-management-system-xtb4.onrender.com/api/orders", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-id": sessionStorage.getItem("userId")
-    },
-    body: JSON.stringify(orderData)
-  })
-    .then(response => {
-      if (!response.ok) {
-        return response.json().then(data => { throw new Error(data.message || "Order creation failed"); });
-      }
-      return response.json();
+  // If editingOrder is set, use PUT to update; otherwise, use POST to add new order
+  if (editingOrder) {
+    fetch(`https://inventory-management-system-xtb4.onrender.com/api/orders/${editingOrder.dataset.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      },
+      body: JSON.stringify(orderData)
     })
-    .then(data => {
-      alert("Order placed successfully!");
-      closeOrderModal(); // Close the order modal
-      fetchOrders(); // Refresh orders list or product quantities
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(data => { throw new Error(data.message || "Order update failed"); });
+        }
+        return response.json();
+      })
+      .then(data => {
+        alert("Order updated successfully!");
+        closeOrderModal();
+        fetchOrders(); // Refresh orders list
+        editingOrder = null;
+      })
+      .catch(err => {
+        console.error("Error updating order:", err);
+        alert("Error updating order: " + err.message);
+      });
+  } else {
+    fetch("https://inventory-management-system-xtb4.onrender.com/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": sessionStorage.getItem("userId")
+      },
+      body: JSON.stringify(orderData)
     })
-    .catch(err => {
-      console.error("Error placing order:", err);
-      alert("Error: " + err.message);
-    });
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(data => { throw new Error(data.message || "Order creation failed"); });
+        }
+        return response.json();
+      })
+      .then(data => {
+        alert("Order placed successfully!");
+        closeOrderModal();
+        fetchOrders(); // Refresh orders list
+      })
+      .catch(err => {
+        console.error("Error placing order:", err);
+        alert("Error placing order: " + err.message);
+      });
+  }
 });
 
 
