@@ -363,23 +363,60 @@ function populateTable(products) {
     console.error('No table body element found with id "productTableBody"');
     return;
   }
-  tableBody.innerHTML = products
-    .map(
-      (product) => `
-    <tr data-id="${product.id}" data-category-id="${product.category_id || ''}">
-      <td>${product.name}</td>
-      <td>${product.quantity}</td>
-      <td>$${parseFloat(product.price).toFixed(2)}</td>
-      <td>${product.category_name || "None"}</td>
-      <td>
-         <button class="btn btn-edit" onclick="openEditModal(this)">Edit</button>
-         <button class="btn btn-delete" onclick="deleteProduct('${product.id}')">Delete</button>
-      </td>
-    </tr>
-  `
-    )
-    .join("");
+  tableBody.innerHTML = products.map(product => `
+      <tr data-id="${product.id}" data-category-id="${product.category_id || ''}">
+          <td>${product.name}</td>
+          <td>${product.quantity}</td>
+          <td>$${parseFloat(product.price).toFixed(2)}</td>
+          <td>${product.category_name || "None"}</td>
+          <td>
+              <button class="btn btn-edit" onclick="openEditModal(this)">Edit</button>
+              <button class="btn btn-delete" onclick="deleteProduct('${product.id}')">Delete</button>
+              <button class="btn btn-history" onclick="showProductHistory('${product.id}')">
+                <i class="fas fa-history"></i>
+              </button>
+          </td>
+      </tr>
+  `).join('');
 }
+
+function showProductHistory(productId) {
+  fetch(`https://inventory-management-system-xtb4.onrender.com/api/products/${productId}/history`, {
+    headers: {
+      "Content-Type": "application/json",
+      "x-user-id": sessionStorage.getItem("userId")
+    }
+  })
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // Build history text; you can later replace this with modal content
+        let historyText = "Product History:\n\n";
+        data.history.forEach(record => {
+          // Format the date to a human-friendly format
+          const dateStr = new Date(record.changed_at).toLocaleString();
+          historyText += `${dateStr}: [${record.change_type}] ${record.change_details}\n\n`;
+        });
+        if (!data.history.length) {
+          historyText += "No history available for this product.";
+        }
+        alert(historyText);
+      } else {
+        alert("Failed to fetch product history.");
+      }
+    })
+    .catch(err => {
+      console.error("Error fetching product history:", err);
+      alert("Error fetching product history.");
+    });
+}
+
+window.showProductHistory = showProductHistory; // Attach globally
 
 // Fetch categories and populate the category dropdown
 function fetchCategories() {

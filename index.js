@@ -113,6 +113,18 @@ async function initializeDatabase() {
 
 initializeDatabase();
 
+// Helper: Log product history
+async function logProductHistory(product_id, changeType, changeDetails, user_id) {
+  try {
+    await pool.query(
+      "INSERT INTO product_history (product_id, change_type, change_details, user_id) VALUES ($1, $2, $3, $4)",
+      [product_id, changeType, changeDetails, user_id]
+    );
+  } catch (err) {
+    console.error("Error logging product history:", err);
+  }
+}
+
 /* --------------------
    AUTHENTICATION ENDPOINTS
 -------------------- */
@@ -181,17 +193,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Helper function to renumber products (if desired)
-function renumberProducts(callback) {
-  pool.query('SET @count = 0', (err) => {
-    if (err) return callback(err);
-    pool.query('UPDATE products SET id = (@count:=@count + 1) ORDER BY id', (err) => {
-      if (err) return callback(err);
-      pool.query('ALTER TABLE products AUTO_INCREMENT = 1', callback);
-    });
-  });
-}
-
 // Middleware to require user identification in header (x-user-id)
 function requireUser(req, res, next) {
   const userId = req.headers["x-user-id"];
@@ -254,11 +255,14 @@ app.put("/api/products/:id", requireUser, async (req, res) => {
   const { name, quantity, price, category_id } = req.body;
   try {
     const result = await pool.query(
-      "UPDATE products SET name = $1, quantity = $2, price = $3, category_id = $4 WHERE id = $5 AND user_id = $6",
+      "UPDATE products SET name = $1, quantity = $2, price = $3, category_id = $4 WHERE id = $5 AND user_id = $6 RETURNING *",
       [name, quantity, price, category_id || null, id, userId]
     );
-    if (result.rowCount === 0) return res.status(404).send("Product not found");
-    res.json({ id, name, quantity, price, category_id });
+    if (result.rowCount === 0)
+      return res.status(404).send("Product not found");
+
+    await logProductHistory(id, "Product Updated", JSON.stringify({ name, quantity, price, category_id }), userId);
+    res.json(result.rows[0]);
   } catch (err) {
     console.error("Error updating product:", err);
     res.status(500).send("Error updating product");
@@ -272,10 +276,26 @@ app.delete("/api/products/:id", requireUser, async (req, res) => {
     await pool.query("DELETE FROM order_items WHERE product_id = $1 AND user_id = $2", [id, userId]);
     const result = await pool.query("DELETE FROM products WHERE id = $1 AND user_id = $2", [id, userId]);
     if (result.rowCount === 0) return res.status(404).send("Product not found");
+    await logProductHistory(id, "Product Deleted", "Product was deleted", userId);
     res.json({ message: "Product and associated order items deleted successfully" });
   } catch (err) {
     console.error("Error deleting product:", err);
     res.status(500).send("Error deleting product");
+  }
+});
+
+app.get("/api/products/:id/history", requireUser, async (req, res) => {
+  const userId = req.userId;
+  const productId = req.params.id;
+  try {
+    const result = await pool.query(
+      "SELECT id, change_type, change_details, changed_at FROM product_history WHERE product_id = $1 AND user_id = $2 ORDER BY changed_at DESC",
+      [productId, userId]
+    );
+    res.json({ success: true, history: result.rows });
+  } catch (err) {
+    console.error("Error fetching product history:", err);
+    res.status(500).json({ success: false, message: "Error fetching product history" });
   }
 });
 
@@ -481,8 +501,8 @@ app.post("/api/orders", requireUser, async (req, res) => {
     return res.status(400).json({ success: false, message: "Invalid order data" });
   }
 
-  // Validate each order item for sufficient stock
   try {
+    // Pre-check stock for each order item
     for (const item of items) {
       const { product_id, quantity } = item;
       const productResult = await pool.query(
@@ -505,32 +525,27 @@ app.post("/api/orders", requireUser, async (req, res) => {
     return res.status(500).json({ success: false, message: "Error checking product quantities" });
   }
 
-  // Start transaction
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
-    // Insert order record
     const orderResult = await client.query(
       "INSERT INTO orders (customer_id, user_id) VALUES ($1, $2) RETURNING id",
       [customer_id, userId]
     );
     const orderId = orderResult.rows[0].id;
 
-    // Process each order item: update product quantity and insert order_items
     for (const item of items) {
       const { product_id, quantity } = item;
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
       );
+      await logProductHistory(product_id, "Order Created", `Quantity reduced by ${quantity} due to order ${orderId}`, userId);
       await client.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
         [orderId, product_id, quantity, userId]
       );
     }
-
-    // Update order value
     await client.query(
       `UPDATE orders SET order_value = (
          SELECT SUM(p.price * oi.quantity)
@@ -540,10 +555,7 @@ app.post("/api/orders", requireUser, async (req, res) => {
        ) WHERE id = $1`,
       [orderId]
     );
-
     await client.query("COMMIT");
-
-    // Optionally, return the order details (simplified here)
     res.status(201).json({ success: true, order: { id: orderId } });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -554,29 +566,63 @@ app.post("/api/orders", requireUser, async (req, res) => {
   }
 });
 
-
 app.put("/api/orders/:id", requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
   const { customer_id, items } = req.body;
   if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).send("Invalid order data");
+    return res.status(400).json({ success: false, message: "Invalid order data" });
   }
+  const client = await pool.connect();
   try {
-    const updateResult = await pool.query(
-      "UPDATE orders SET customer_id = $1 WHERE id = $2 AND user_id = $3",
-      [customer_id, id, userId]
+    await client.query("BEGIN");
+
+    // Refund current order items stock and log history
+    const existingResult = await client.query(
+      "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
+      [id, userId]
     );
-    if (updateResult.rowCount === 0) return res.status(404).send("Order not found");
-    await pool.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
-    const orderItemsData = items.map(item => [id, item.product_id, item.quantity, userId]);
-    const insertQuery = `
-      INSERT INTO order_items (order_id, product_id, quantity, user_id)
-      VALUES ${orderItemsData.map((_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`).join(", ")}
-    `;
-    const insertParams = orderItemsData.flat();
-    await pool.query(insertQuery, insertParams);
-    await pool.query(
+    const existingItems = existingResult.rows;
+    for (const item of existingItems) {
+      await client.query(
+        "UPDATE products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3",
+        [item.quantity, item.product_id, userId]
+      );
+      await logProductHistory(item.product_id, "Order Edited - Refunded", `Refunded quantity ${item.quantity} for order ${id}`, userId);
+    }
+    await client.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
+
+    // Process new order items
+    for (const item of items) {
+      const { product_id, quantity } = item;
+      const productResult = await client.query(
+        "SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2",
+        [product_id, userId]
+      );
+      if (productResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ success: false, message: `Product with id ${product_id} not found` });
+      }
+      const product = productResult.rows[0];
+      if (parseInt(product.quantity, 10) < parseInt(quantity, 10)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
+        });
+      }
+      await client.query(
+        "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
+        [quantity, product_id, userId]
+      );
+      await logProductHistory(product_id, "Order Edited - Deducted", `Deducted quantity ${quantity} for order ${id}`, userId);
+      await client.query(
+        "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
+        [id, product_id, quantity, userId]
+      );
+    }
+    await client.query("UPDATE orders SET customer_id = $1 WHERE id = $2 AND user_id = $3", [customer_id, id, userId]);
+    await client.query(
       `UPDATE orders SET order_value = (
          SELECT SUM(p.price * oi.quantity)
          FROM order_items oi
@@ -585,6 +631,8 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
        ) WHERE id = $1`,
       [id]
     );
+    await client.query("COMMIT");
+
     const orderFetchResult = await pool.query(
       `SELECT 
          o.id AS order_id,
@@ -594,7 +642,8 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
          c.id AS customer_id,
          COALESCE(
            '[' || STRING_AGG(
-             '{"product_id":' || p.id || ',"name":"' || p.name || '","price":' || p.price || ',"quantity":' || oi.quantity || '}',
+             '{"product_id":' || p.id || ',"name":"'
+             || p.name || '","price":' || p.price || ',"quantity":' || oi.quantity || '}',
              ','
            ) || ']',
            '[]'
@@ -607,24 +656,64 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
        GROUP BY o.id, c.name, c.id`,
       [id, userId]
     );
-    res.json(orderFetchResult.rows[0]);
+    res.json({ success: true, order: orderFetchResult.rows[0] });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Error updating order:", err);
-    res.status(500).send("Error updating order");
+    res.status(500).json({ success: false, message: "Error updating order" });
+  } finally {
+    client.release();
   }
 });
 
 app.delete("/api/orders/:id", requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
+  const client = await pool.connect();
   try {
-    await pool.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
-    const result = await pool.query("DELETE FROM orders WHERE id = $1 AND user_id = $2", [id, userId]);
-    if (result.rowCount === 0) return res.status(404).send("Order not found");
-    res.json({ message: "Order deleted successfully" });
+    await client.query("BEGIN");
+    // Refund stock for order items and log history
+    const itemsResult = await client.query(
+      "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
+      [id, userId]
+    );
+    const items = itemsResult.rows;
+    for (const item of items) {
+      await client.query(
+        "UPDATE products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3",
+        [item.quantity, item.product_id, userId]
+      );
+      await logProductHistory(item.product_id, "Order Deleted - Refunded", `Refunded quantity ${item.quantity} for deleted order ${id}`, userId);
+    }
+    await client.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
+    const result = await client.query("DELETE FROM orders WHERE id = $1 AND user_id = $2", [id, userId]);
+    if (result.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).send("Order not found");
+    }
+    await client.query("COMMIT");
+    res.json({ success: true, message: "Order deleted successfully" });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Error deleting order:", err);
-    res.status(500).send("Error deleting order");
+    res.status(500).json({ success: false, message: "Error deleting order" });
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/products/:id/history", requireUser, async (req, res) => {
+  const userId = req.userId;
+  const productId = req.params.id;
+  try {
+    const result = await pool.query(
+      "SELECT id, change_type, change_details, changed_at FROM product_history WHERE product_id = $1 AND user_id = $2 ORDER BY changed_at DESC",
+      [productId, userId]
+    );
+    res.json({ success: true, history: result.rows });
+  } catch (err) {
+    console.error("Error fetching product history:", err);
+    res.status(500).json({ success: false, message: "Error fetching product history" });
   }
 });
 
