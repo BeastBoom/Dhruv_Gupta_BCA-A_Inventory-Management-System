@@ -468,14 +468,9 @@ app.delete("/api/customers/:id", requireUser, async (req, res) => {
 
 app.put("/api/orders/:id", requireUser, async (req, res) => {
   const userId = req.userId;
-  const orderId = parseInt(req.params.id, 10);
-  if (isNaN(orderId)) {
-    return res.status(400).json({ success: false, message: "Invalid order id" });
-  }
-  
-  // Expect order_date as a string in "YYYY-MM-DD" format
-  const { customer_id, order_date, items } = req.body;
-  if (!customer_id || !order_date || !items || !Array.isArray(items) || items.length === 0) {
+  const { id } = req.params; // Order ID to update
+  const { customer_id, items } = req.body;
+  if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid order data" });
   }
   
@@ -483,17 +478,14 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // Verify that the order exists for this user
-    const orderCheck = await client.query(
-      "SELECT id FROM orders WHERE id = $1 AND user_id = $2",
-      [orderId, userId]
-    );
+    // Verify order exists before proceeding
+    const orderCheck = await client.query("SELECT id FROM orders WHERE id = $1 AND user_id = $2", [id, userId]);
     if (orderCheck.rowCount === 0) {
       await client.query("ROLLBACK");
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    // Refund existing order items and log history
+    // Refund current order items (add back quantities) and log history
     const existingResult = await client.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
       [orderId, userId]
@@ -512,10 +504,10 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
       );
     }
     
-    // Delete existing order items for the order
-    await client.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [orderId, userId]);
+    // Delete the existing order items
+    await client.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
 
-    // Process new order items
+    // Process new order items: check stock, deduct new quantity, log history, and insert new order items
     for (const item of items) {
       const { product_id, quantity } = item;
       const productResult = await client.query(
@@ -534,7 +526,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
         });
       }
-      // Deduct the requested quantity from product stock
+      // Deduct the new quantity from the product stock
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
@@ -545,20 +537,20 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
         `Deducted quantity ${quantity} for order ${orderId}`,
         userId
       );
-      // Insert new order item record
+      // Insert the new order item record for this order
       await client.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
         [orderId, product_id, quantity, userId]
       );
     }
     
-    // Update the order's customer_id and order_date (explicitly cast order_date to timestamp)
+    // Update the order's customer_id (if changed)
     await client.query(
       "UPDATE orders SET customer_id = $1, order_date = $2::timestamp WHERE id = $3 AND user_id = $4",
       [customer_id, order_date, orderId, userId]
     );
     
-    // Recalculate order value based on updated order items
+    // Recalculate order value based on new order items
     await client.query(
       `UPDATE orders SET order_value = (
          SELECT COALESCE(SUM(p.price * oi.quantity), 0)
@@ -571,8 +563,8 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     
     await client.query("COMMIT");
 
-    // Fetch and return the updated order details
-    const orderFetchResult = await client.query(
+    // Fetch and return the updated order details (optional: for client UI refresh)
+    const orderFetchResult = await pool.query(
       `SELECT 
          o.id AS order_id,
          o.order_date,
@@ -603,8 +595,6 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     client.release();
   }
 });
-
-
 
 
 app.delete("/api/orders/:id", requireUser, async (req, res) => {
