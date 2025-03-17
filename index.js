@@ -481,7 +481,7 @@ app.post("/api/orders", requireUser, async (req, res) => {
     return res.status(400).send("Invalid order data");
   }
 
-  // Pre-check: Verify available quantity for each item
+  // Check available quantity for each order item before processing the order
   try {
     for (let item of items) {
       const { product_id, quantity } = item;
@@ -493,7 +493,9 @@ app.post("/api/orders", requireUser, async (req, res) => {
         return res.status(404).send(`Product with id ${product_id} not found`);
       }
       const product = productResult.rows[0];
-      if (parseInt(product.quantity) < parseInt(quantity)) {
+      // Convert both values to integers for comparison
+      if (parseInt(product.quantity, 10) < parseInt(quantity, 10)) {
+        console.error(`Insufficient stock for ${product.name}: Available ${product.quantity}, requested ${quantity}`);
         return res.status(400).json({
           success: false,
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
@@ -505,22 +507,22 @@ app.post("/api/orders", requireUser, async (req, res) => {
     return res.status(500).send("Error checking product quantities");
   }
 
-  // Start a transaction
+  // Begin transaction
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Insert the order
+    // Insert new order
     const orderResult = await client.query(
       "INSERT INTO orders (customer_id, user_id) VALUES ($1, $2) RETURNING id",
       [customer_id, userId]
     );
     const orderId = orderResult.rows[0].id;
 
-    // For each item, update product quantity and insert order_items
+    // Process each order item: update product quantity and insert into order_items
     for (let item of items) {
       const { product_id, quantity } = item;
-      // Update product quantity (subtract the ordered quantity)
+      // Update product quantity
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
@@ -532,7 +534,7 @@ app.post("/api/orders", requireUser, async (req, res) => {
       );
     }
 
-    // Recalculate order_value for the order
+    // Recalculate order value for the new order
     await client.query(
       `UPDATE orders SET order_value = (
          SELECT SUM(p.price * oi.quantity)
@@ -545,7 +547,7 @@ app.post("/api/orders", requireUser, async (req, res) => {
 
     await client.query("COMMIT");
 
-    // Fetch the created order details to send back
+    // Optionally, you may fetch and return the updated products list as well.
     const orderFetchResult = await pool.query(
       `SELECT 
          o.id AS order_id,
@@ -569,7 +571,6 @@ app.post("/api/orders", requireUser, async (req, res) => {
       [orderId, userId]
     );
 
-    // OPTIONAL: You could also return the updated products list here if desired.
     res.status(201).json(orderFetchResult.rows[0]);
   } catch (err) {
     await client.query("ROLLBACK");
@@ -579,6 +580,7 @@ app.post("/api/orders", requireUser, async (req, res) => {
     client.release();
   }
 });
+
 
 
 app.put("/api/orders/:id", requireUser, async (req, res) => {

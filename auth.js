@@ -1,20 +1,25 @@
 "use strict";
 
+// Toggle between login and signup views
 const signUpButton = document.getElementById('signUp');
 const signInButton = document.getElementById('signIn');
 const container = document.getElementById('container');
 
-signUpButton.addEventListener('click', () => {
-	container.classList.add("right-panel-active");
-});
+if (signUpButton && signInButton && container) {
+  signUpButton.addEventListener('click', () => {
+    container.classList.add("right-panel-active");
+  });
+  signInButton.addEventListener('click', () => {
+    container.classList.remove("right-panel-active");
+  });
+} else {
+  console.error("Toggle buttons or container not found.");
+}
 
-signInButton.addEventListener('click', () => {
-	container.classList.remove("right-panel-active");
-});
-
+// Wait for the DOM to load before attaching form handlers
 document.addEventListener("DOMContentLoaded", () => {
-  // Login form handling
-  const loginForm = document.getElementById("loginForm");
+  // Login form handling – note the ID is "login-form" (with a dash) in your HTML.
+  const loginForm = document.getElementById("login-form");
   if (loginForm) {
     loginForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -28,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            // Save user ID in sessionStorage for the session
+            // Save user ID in sessionStorage for this session
             sessionStorage.setItem("userId", data.user.id);
             // Redirect to dashboard
             window.location.href = "templates/dashboard.html";
@@ -41,10 +46,12 @@ document.addEventListener("DOMContentLoaded", () => {
           alert("Login failed.");
         });
     });
+  } else {
+    console.error("Login form (id='login-form') not found.");
   }
 
-  // Signup form handling
-  const signupForm = document.getElementById("signupForm");
+  // Signup form handling – note the ID is "signup-form" (with a dash) in your HTML.
+  const signupForm = document.getElementById("signup-form");
   if (signupForm) {
     signupForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -108,7 +115,8 @@ document.addEventListener("DOMContentLoaded", () => {
         .then((data) => {
           if (data.success) {
             alert("Signup successful! Please log in.");
-            window.location.href = "index.html";
+            // Optionally, switch back to login view
+            container.classList.remove("right-panel-active");
           } else {
             alert("Signup failed: " + data.message);
           }
@@ -119,6 +127,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
   } else {
-    console.error("Signup form (id='signupForm') not found in the DOM.");
+    console.error("Signup form (id='signup-form') not found.");
   }
 });
