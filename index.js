@@ -582,20 +582,19 @@ app.post("/api/orders", requireUser, async (req, res) => {
 app.put("/api/orders/:id", requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params; // Order ID to update
-  // Extract order_date but do not require it for validation
   const { customer_id, order_date, items } = req.body;
 
-  // Validate that customer_id and items are provided
-  if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
+  // Validate incoming data; order_date must be provided (non‑empty string)
+  if (!customer_id || !order_date || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid order data" });
   }
   
   const client = await pool.connect();
   try {
-    console.log(`Updating order ${id} for user ${userId}`);
+    console.log(`Updating order ${id} for user ${userId} with order_date ${order_date}`);
     await client.query("BEGIN");
 
-    // Verify that the order exists
+    // Verify that the order exists for this user
     const orderCheck = await client.query(
       "SELECT id FROM orders WHERE id = $1 AND user_id = $2",
       [id, userId]
@@ -649,7 +648,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
         });
       }
-      // Deduct the new quantity from product stock
+      // Deduct the requested quantity from product stock
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
@@ -668,20 +667,12 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     }
     console.log("Processed new order items");
 
-    // Update the order's customer_id and, if provided, order_date
-    if (order_date && order_date.trim() !== "") {
-      await client.query(
-        "UPDATE orders SET customer_id = $1, order_date = $2::timestamp WHERE id = $3 AND user_id = $4",
-        [customer_id, order_date, id, userId]
-      );
-      console.log("Updated order's customer_id and order_date");
-    } else {
-      await client.query(
-        "UPDATE orders SET customer_id = $1 WHERE id = $2 AND user_id = $3",
-        [customer_id, id, userId]
-      );
-      console.log("Updated order's customer_id (order_date unchanged)");
-    }
+    // Update the order's customer_id and order_date (always update order_date)
+    await client.query(
+      "UPDATE orders SET customer_id = $1, order_date = $2::timestamp WHERE id = $3 AND user_id = $4",
+      [customer_id, order_date, id, userId]
+    );
+    console.log("Updated order's customer_id and order_date");
 
     // Recalculate the order's total value
     await client.query(
@@ -730,8 +721,6 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     client.release();
   }
 });
-
-
 
 
 app.delete("/api/orders/:id", requireUser, async (req, res) => {
