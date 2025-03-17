@@ -106,6 +106,19 @@ async function initializeDatabase() {
       )
     `);
     console.log("Order_items table is ready");
+
+    // Create product_history table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS product_history (
+        id SERIAL PRIMARY KEY,
+        product_id INT NOT NULL,
+        change_type VARCHAR(50) NOT NULL,
+        change_details TEXT,
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        user_id INT NOT NULL
+      )
+    `);
+    console.log("Product_history table is ready");
   } catch (err) {
     console.error("Error initializing database:", err);
   }

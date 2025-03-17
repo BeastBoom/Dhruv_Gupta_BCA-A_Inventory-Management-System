@@ -311,12 +311,11 @@ function deleteOrder(orderId) {
 }
 
 // Order form submission handler
-document.getElementById("orderForm").addEventListener("submit", function (e) {
+document.getElementById("orderForm").addEventListener("submit", function(e) {
   e.preventDefault();
   
-  // Construct the orderData object with customer_id and items
   const customer_id = document.getElementById("orderCustomerSelect").value;
-  const orderDate = document.getElementById("orderDate").value; // if needed
+  const order_date = document.getElementById("orderDate").value; // if used
   const container = document.getElementById("orderItemsContainer");
   const rows = container.getElementsByClassName("order-item-row");
   const items = [];
@@ -331,7 +330,7 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
     }
   }
   
-  if (!customer_id || !orderDate || items.length === 0) {
+  if (!customer_id || items.length === 0) {
     alert("Please fill in all fields.");
     return;
   }
@@ -342,27 +341,27 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-user-id": sessionStorage.getItem("userId") // Ensure your session contains a valid userId
+      "x-user-id": sessionStorage.getItem("userId")
     },
     body: JSON.stringify(orderData)
   })
     .then(response => {
       if (!response.ok) {
-        return response.json().then(data => {
-          throw new Error(data.message || "Order creation failed");
-        });
+        return response.json().then(data => { throw new Error(data.message || "Order creation failed"); });
       }
       return response.json();
     })
     .then(data => {
       alert("Order placed successfully!");
-      // Optionally refresh product list to show updated quantities:
-      fetchProducts(); // Assuming fetchProducts() updates the UI
+      closeOrderModal(); // Close the order modal
+      fetchOrders(); // Refresh orders list or product quantities
     })
     .catch(err => {
+      console.error("Error placing order:", err);
       alert("Error: " + err.message);
     });
 });
+
 
 // Attach functions to the global window object for HTML onclick handlers
 window.openOrderModal = openOrderModal;

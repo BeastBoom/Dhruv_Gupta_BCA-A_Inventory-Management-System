@@ -389,34 +389,32 @@ function showProductHistory(productId) {
   })
     .then(res => {
       if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+        return res.text().then(text => { throw new Error(text || res.status); });
       }
       return res.json();
     })
     .then(data => {
       if (data.success) {
-        // Build history text; you can later replace this with modal content
         let historyText = "Product History:\n\n";
-        data.history.forEach(record => {
-          // Format the date to a human-friendly format
-          const dateStr = new Date(record.changed_at).toLocaleString();
-          historyText += `${dateStr}: [${record.change_type}] ${record.change_details}\n\n`;
-        });
         if (!data.history.length) {
           historyText += "No history available for this product.";
+        } else {
+          data.history.forEach(record => {
+            const dateStr = new Date(record.changed_at).toLocaleString();
+            historyText += `${dateStr}: [${record.change_type}] ${record.change_details}\n\n`;
+          });
         }
         alert(historyText);
       } else {
-        alert("Failed to fetch product history.");
+        alert("Failed to fetch product history: " + data.message);
       }
     })
     .catch(err => {
       console.error("Error fetching product history:", err);
-      alert("Error fetching product history.");
+      alert("Error fetching product history: " + err.message);
     });
 }
 
-window.showProductHistory = showProductHistory; // Attach globally
 
 // Fetch categories and populate the category dropdown
 function fetchCategories() {
@@ -528,54 +526,42 @@ document.getElementById("productForm").addEventListener("submit", async function
   
   price = parseFloat(price);
   if (isNaN(price)) {
-    alert("Please enter a valid price.");
-    return;
+      alert("Please enter a valid price.");
+      return;
   }
   
-  const product = {
-    name: productName,
-    quantity: quantity,
-    price: price,
-    category_id: categoryId || null,
-  };
+  const product = { name: productName, quantity, price, category_id: categoryId || null };
   
   if (editingRowProd) {
-    // Update existing product
     try {
       const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/products/${editingRowProd.dataset.id}`, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-user-id": sessionStorage.getItem("userId")
-        },
-        body: JSON.stringify(product),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product)
       });
       const data = await response.json();
-      // Update the product row in the table
       editingRowProd.cells[0].textContent = data.name;
       editingRowProd.cells[1].textContent = data.quantity;
       editingRowProd.cells[2].textContent = `$${data.price.toFixed(2)}`;
       editingRowProd.cells[3].textContent = data.category_name || "None";
-      closeProductModal();
+      closeProductModal(); // This call closes the modal
     } catch (error) {
       console.error("Error updating product:", error);
+      alert("Error updating product: " + error.message);
     }
   } else {
-    // Create a new product
     try {
       const response = await fetch("https://inventory-management-system-xtb4.onrender.com/api/products", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-user-id": sessionStorage.getItem("userId")
-        },
-        body: JSON.stringify(product),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product)
       });
       await response.json();
       fetchProducts();
-      closeProductModal();
+      closeProductModal(); // Close modal after creation
     } catch (error) {
       console.error("Error saving product:", error);
+      alert("Error saving product: " + error.message);
     }
   }
 });
