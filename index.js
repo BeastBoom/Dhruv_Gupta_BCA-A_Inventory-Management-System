@@ -581,16 +581,17 @@ app.post("/api/orders", requireUser, async (req, res) => {
 
 app.put("/api/orders/:id", requireUser, async (req, res) => {
   const userId = req.userId;
-  const { id } = req.params;
+  const { id } = req.params; // Existing order id
   const { customer_id, items } = req.body;
   if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid order data" });
   }
+  
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Refund current order items stock and log history
+    // Refund stock from existing order items and log history
     const existingResult = await client.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
       [id, userId]
@@ -601,13 +602,21 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
         "UPDATE products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3",
         [item.quantity, item.product_id, userId]
       );
-      await logProductHistory(item.product_id, "Order Edited - Refunded", `Refunded quantity ${item.quantity} for order ${id}`, userId);
+      await logProductHistory(
+        item.product_id,
+        "Order Edited - Refunded",
+        `Refunded quantity ${item.quantity} for order ${id}`,
+        userId
+      );
     }
+    
+    // Delete existing order items
     await client.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
 
     // Process new order items
     for (const item of items) {
       const { product_id, quantity } = item;
+      // Check available stock for each new item
       const productResult = await client.query(
         "SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2",
         [product_id, userId]
@@ -624,28 +633,44 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
         });
       }
+      // Deduct new quantity
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
       );
-      await logProductHistory(product_id, "Order Edited - Deducted", `Deducted quantity ${quantity} for order ${id}`, userId);
+      await logProductHistory(
+        product_id,
+        "Order Edited - Deducted",
+        `Deducted quantity ${quantity} for order ${id}`,
+        userId
+      );
+      // Insert new order item record
       await client.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
         [id, product_id, quantity, userId]
       );
     }
-    await client.query("UPDATE orders SET customer_id = $1 WHERE id = $2 AND user_id = $3", [customer_id, id, userId]);
+    
+    // Update the order's customer_id if changed
+    await client.query(
+      "UPDATE orders SET customer_id = $1 WHERE id = $2 AND user_id = $3",
+      [customer_id, id, userId]
+    );
+    
+    // Recalculate order value
     await client.query(
       `UPDATE orders SET order_value = (
-         SELECT SUM(p.price * oi.quantity)
+         SELECT COALESCE(SUM(p.price * oi.quantity), 0)
          FROM order_items oi
          JOIN products p ON oi.product_id = p.id
          WHERE oi.order_id = $1
        ) WHERE id = $1`,
       [id]
     );
+    
     await client.query("COMMIT");
 
+    // Fetch updated order details
     const orderFetchResult = await pool.query(
       `SELECT 
          o.id AS order_id,
@@ -655,8 +680,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
          c.id AS customer_id,
          COALESCE(
            '[' || STRING_AGG(
-             '{"product_id":' || p.id || ',"name":"'
-             || p.name || '","price":' || p.price || ',"quantity":' || oi.quantity || '}',
+             '{"product_id":' || p.id || ',"name":"' || p.name || '","price":' || p.price || ',"quantity":' || oi.quantity || '}',
              ','
            ) || ']',
            '[]'
