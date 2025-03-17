@@ -395,16 +395,36 @@ function showProductHistory(productId) {
     })
     .then(data => {
       if (data.success) {
-        let historyText = "Product History:\n\n";
-        if (!data.history.length) {
-          historyText += "No history available for this product.";
+        let historyHtml = "";
+        if (data.history.length === 0) {
+          historyHtml = "<p>No history available for this product.</p>";
         } else {
           data.history.forEach(record => {
             const dateStr = new Date(record.changed_at).toLocaleString();
-            historyText += `${dateStr}: [${record.change_type}] ${record.change_details}\n\n`;
+            let details = record.change_details;
+            // If details is in JSON format, parse and reformat it.
+            try {
+              const detailsObj = JSON.parse(details);
+              let detailsStr = "";
+              for (const key in detailsObj) {
+                detailsStr += `<strong>${key}:</strong> ${detailsObj[key]}<br/>`;
+              }
+              details = detailsStr;
+            } catch (e) {
+              // If parsing fails, use the raw details.
+            }
+            historyHtml += `
+              <div class="history-record">
+                <p><strong>${dateStr}</strong></p>
+                <p>Type: ${record.change_type}</p>
+                <p>Details: ${details}</p>
+              </div>
+              <hr/>
+            `;
           });
         }
-        alert(historyText);
+        document.getElementById("historyContent").innerHTML = historyHtml;
+        openHistoryModal();
       } else {
         alert("Failed to fetch product history: " + data.message);
       }
@@ -415,6 +435,35 @@ function showProductHistory(productId) {
     });
 }
 
+function openHistoryModal() {
+  const modal = document.getElementById("historyModal");
+  if (modal) {
+    modal.style.display = "block";
+  }
+}
+
+function closeHistoryModal() {
+  const modal = document.getElementById("historyModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+// Attach close event to the modal's close button
+document.addEventListener("DOMContentLoaded", () => {
+  const closeBtn = document.getElementById("historyModalClose");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeHistoryModal);
+  }
+  
+  // Close the modal when clicking outside the content area
+  window.addEventListener("click", (event) => {
+    const modal = document.getElementById("historyModal");
+    if (event.target === modal) {
+      modal.style.display = "none";
+    }
+  });
+});
 
 // Fetch categories and populate the category dropdown
 function fetchCategories() {
@@ -520,44 +569,75 @@ document.getElementById("productForm").addEventListener("submit", async function
   e.preventDefault();
   
   const productName = document.getElementById("productName").value;
-  const quantity = document.getElementById("quantity").value;
+  const quantityStr = document.getElementById("quantity").value;
   let price = document.getElementById("price").value;
   const categoryId = document.getElementById("categorySelect").value;
   
-  price = parseFloat(price);
-  if (isNaN(price)) {
-      alert("Please enter a valid price.");
-      return;
+  // Validate and parse quantity
+  const quantity = parseInt(quantityStr, 10);
+  if (isNaN(quantity)) {
+    alert("Please enter a valid quantity.");
+    return;
   }
   
-  const product = { name: productName, quantity, price, category_id: categoryId || null };
+  // Parse and validate price
+  price = parseFloat(price);
+  if (isNaN(price)) {
+    alert("Please enter a valid price.");
+    return;
+  }
   
+  const product = {
+    name: productName,
+    quantity: quantity,
+    price: price,
+    category_id: categoryId || null
+  };
+
+  // Include the user ID header (ensure sessionStorage has a valid "userId")
+  const headers = {
+    "Content-Type": "application/json",
+    "x-user-id": sessionStorage.getItem("userId")
+  };
+
   if (editingRowProd) {
+    // Update existing product
     try {
       const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/products/${editingRowProd.dataset.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify(product)
       });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
       const data = await response.json();
+      // Ensure returned price is parsed before calling toFixed()
+      const updatedPrice = parseFloat(data.price) || 0;
       editingRowProd.cells[0].textContent = data.name;
       editingRowProd.cells[1].textContent = data.quantity;
-      editingRowProd.cells[2].textContent = `$${data.price.toFixed(2)}`;
+      editingRowProd.cells[2].textContent = `$${updatedPrice.toFixed(2)}`;
       editingRowProd.cells[3].textContent = data.category_name || "None";
-      closeProductModal(); // This call closes the modal
+      closeProductModal(); // Close the modal on success
     } catch (error) {
       console.error("Error updating product:", error);
       alert("Error updating product: " + error.message);
     }
   } else {
+    // Create a new product
     try {
       const response = await fetch("https://inventory-management-system-xtb4.onrender.com/api/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify(product)
       });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
       await response.json();
-      fetchProducts();
+      fetchProducts(); // Refresh product list
       closeProductModal(); // Close modal after creation
     } catch (error) {
       console.error("Error saving product:", error);
@@ -565,6 +645,7 @@ document.getElementById("productForm").addEventListener("submit", async function
     }
   }
 });
+
 
 
 // Attach global functions for inline HTML event handlers

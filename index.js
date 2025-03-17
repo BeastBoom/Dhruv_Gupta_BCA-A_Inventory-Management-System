@@ -715,21 +715,6 @@ app.delete("/api/orders/:id", requireUser, async (req, res) => {
   }
 });
 
-app.get("/api/products/:id/history", requireUser, async (req, res) => {
-  const userId = req.userId;
-  const productId = req.params.id;
-  try {
-    const result = await pool.query(
-      "SELECT id, change_type, change_details, changed_at FROM product_history WHERE product_id = $1 AND user_id = $2 ORDER BY changed_at DESC",
-      [productId, userId]
-    );
-    res.json({ success: true, history: result.rows });
-  } catch (err) {
-    console.error("Error fetching product history:", err);
-    res.status(500).json({ success: false, message: "Error fetching product history" });
-  }
-});
-
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
