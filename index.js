@@ -583,22 +583,29 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params; // Order ID to update
   const { customer_id, items } = req.body;
+
+  // Validate incoming data
   if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid order data" });
   }
   
   const client = await pool.connect();
   try {
+    console.log(`Updating order ${id} for user ${userId}`);
     await client.query("BEGIN");
 
-    // Verify order exists before proceeding
-    const orderCheck = await client.query("SELECT id FROM orders WHERE id = $1 AND user_id = $2", [id, userId]);
+    // Verify the order exists
+    const orderCheck = await client.query(
+      "SELECT id FROM orders WHERE id = $1 AND user_id = $2",
+      [id, userId]
+    );
     if (orderCheck.rowCount === 0) {
       await client.query("ROLLBACK");
       return res.status(404).json({ success: false, message: "Order not found" });
     }
+    console.log(`Order ${id} exists; proceeding with update.`);
 
-    // Refund current order items (add back quantities) and log history
+    // Refund current order items (add back their quantities) and log history
     const existingResult = await client.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
       [id, userId]
@@ -616,11 +623,13 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
         userId
       );
     }
-    
-    // Delete the existing order items
-    await client.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
+    console.log(`Refunded ${existingItems.length} existing order items for order ${id}`);
 
-    // Process new order items: check stock, deduct new quantity, log history, and insert new order items
+    // Delete existing order items
+    await client.query("DELETE FROM order_items WHERE order_id = $1 AND user_id = $2", [id, userId]);
+    console.log("Deleted existing order items");
+
+    // Process new order items
     for (const item of items) {
       const { product_id, quantity } = item;
       const productResult = await client.query(
@@ -639,7 +648,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
         });
       }
-      // Deduct the new quantity from the product stock
+      // Deduct the new quantity from product stock
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
@@ -650,20 +659,22 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
         `Deducted quantity ${quantity} for order ${id}`,
         userId
       );
-      // Insert the new order item record for this order
+      // Insert new order item record (for the same order id)
       await client.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
         [id, product_id, quantity, userId]
       );
     }
-    
-    // Update the order's customer_id (if changed)
+    console.log("Processed new order items");
+
+    // Update the order's customer_id (if needed)
     await client.query(
       "UPDATE orders SET customer_id = $1 WHERE id = $2 AND user_id = $3",
       [customer_id, id, userId]
     );
-    
-    // Recalculate order value based on new order items
+    console.log("Updated order's customer_id");
+
+    // Recalculate the order's total value
     await client.query(
       `UPDATE orders SET order_value = (
          SELECT COALESCE(SUM(p.price * oi.quantity), 0)
@@ -673,10 +684,11 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
        ) WHERE id = $1`,
       [id]
     );
-    
+    console.log("Recalculated order value");
+
     await client.query("COMMIT");
 
-    // Fetch and return the updated order details (optional: for client UI refresh)
+    // Fetch and return the updated order details
     const orderFetchResult = await pool.query(
       `SELECT 
          o.id AS order_id,
@@ -699,6 +711,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
        GROUP BY o.id, c.name, c.id`,
       [id, userId]
     );
+    console.log("Order updated successfully.");
     res.json({ success: true, order: orderFetchResult.rows[0] });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -708,6 +721,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     client.release();
   }
 });
+
 
 
 app.delete("/api/orders/:id", requireUser, async (req, res) => {
