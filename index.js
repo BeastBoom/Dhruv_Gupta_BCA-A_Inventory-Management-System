@@ -584,17 +584,17 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
   const { id } = req.params; // Order ID to update
   const { customer_id, order_date, items } = req.body;
 
-  // Validate incoming data: order_date must be provided in "YYYY-MM-DD" format
+  // Validate incoming data
   if (!customer_id || !order_date || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid order data" });
   }
-
+  
   const client = await pool.connect();
   try {
     console.log(`Updating order ${id} for user ${userId}`);
     await client.query("BEGIN");
 
-    // Verify that the order exists
+    // Verify the order exists
     const orderCheck = await client.query(
       "SELECT id FROM orders WHERE id = $1 AND user_id = $2",
       [id, userId]
@@ -605,7 +605,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     }
     console.log(`Order ${id} exists; proceeding with update.`);
 
-    // Refund existing order items (add back their quantities) and log history
+    // Refund current order items (add back their quantities) and log history
     const existingResult = await client.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
       [id, userId]
@@ -659,7 +659,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
         `Deducted quantity ${quantity} for order ${id}`,
         userId
       );
-      // Insert new order item record
+      // Insert new order item record (for the same order id)
       await client.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
         [id, product_id, quantity, userId]
@@ -667,7 +667,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     }
     console.log("Processed new order items");
 
-    // Update the order's customer_id and order_date (explicitly cast order_date to timestamp)
+    // Update the order's customer_id (if needed)
     await client.query(
       "UPDATE orders SET customer_id = $1, order_date = $2::timestamp WHERE id = $3 AND user_id = $4",
       [customer_id, order_date, id, userId]
