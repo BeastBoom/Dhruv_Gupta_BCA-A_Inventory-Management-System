@@ -366,7 +366,7 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
         alert("Error updating order: " + err.message);
       });
   } else {
-    fetch("https://inventory-management-system-xtb4.onrender.com/api/orders", {
+    fetch(`https://inventory-management-system-xtb4.onrender.com/api/orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
