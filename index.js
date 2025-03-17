@@ -478,63 +478,59 @@ app.post("/api/orders", requireUser, async (req, res) => {
   const userId = req.userId;
   const { customer_id, items } = req.body;
   if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).send("Invalid order data");
+    return res.status(400).json({ success: false, message: "Invalid order data" });
   }
 
-  // Check available quantity for each order item before processing the order
+  // Validate each order item for sufficient stock
   try {
-    for (let item of items) {
+    for (const item of items) {
       const { product_id, quantity } = item;
       const productResult = await pool.query(
         "SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2",
         [product_id, userId]
       );
       if (productResult.rowCount === 0) {
-        return res.status(404).send(`Product with id ${product_id} not found`);
+        return res.status(404).json({ success: false, message: `Product with id ${product_id} not found` });
       }
       const product = productResult.rows[0];
-      // Convert both values to integers for comparison
       if (parseInt(product.quantity, 10) < parseInt(quantity, 10)) {
-        console.error(`Insufficient stock for ${product.name}: Available ${product.quantity}, requested ${quantity}`);
         return res.status(400).json({
           success: false,
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
         });
       }
     }
-  } catch (err) {
-    console.error("Error checking product quantities:", err);
-    return res.status(500).send("Error checking product quantities");
+  } catch (error) {
+    console.error("Error checking product quantities:", error);
+    return res.status(500).json({ success: false, message: "Error checking product quantities" });
   }
 
-  // Begin transaction
+  // Start transaction
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Insert new order
+    // Insert order record
     const orderResult = await client.query(
       "INSERT INTO orders (customer_id, user_id) VALUES ($1, $2) RETURNING id",
       [customer_id, userId]
     );
     const orderId = orderResult.rows[0].id;
 
-    // Process each order item: update product quantity and insert into order_items
-    for (let item of items) {
+    // Process each order item: update product quantity and insert order_items
+    for (const item of items) {
       const { product_id, quantity } = item;
-      // Update product quantity
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
       );
-      // Insert order item record
       await client.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
         [orderId, product_id, quantity, userId]
       );
     }
 
-    // Recalculate order value for the new order
+    // Update order value
     await client.query(
       `UPDATE orders SET order_value = (
          SELECT SUM(p.price * oi.quantity)
@@ -547,40 +543,16 @@ app.post("/api/orders", requireUser, async (req, res) => {
 
     await client.query("COMMIT");
 
-    // Optionally, you may fetch and return the updated products list as well.
-    const orderFetchResult = await pool.query(
-      `SELECT 
-         o.id AS order_id,
-         o.order_date,
-         o.order_value,
-         c.name AS customer_name,
-         c.id AS customer_id,
-         COALESCE(
-           '[' || STRING_AGG(
-             '{"product_id":' || p.id || ',"name":"' || p.name || '","price":' || p.price || ',"quantity":' || oi.quantity || '}',
-             ','
-           ) || ']',
-           '[]'
-         ) AS products
-       FROM orders o
-       LEFT JOIN customers c ON o.customer_id = c.id
-       LEFT JOIN order_items oi ON o.id = oi.order_id
-       LEFT JOIN products p ON oi.product_id = p.id
-       WHERE o.id = $1 AND o.user_id = $2
-       GROUP BY o.id, c.name, c.id`,
-      [orderId, userId]
-    );
-
-    res.status(201).json(orderFetchResult.rows[0]);
+    // Optionally, return the order details (simplified here)
+    res.status(201).json({ success: true, order: { id: orderId } });
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Error creating order:", err);
-    res.status(500).send("Error creating order");
+    res.status(500).json({ success: false, message: "Error creating order" });
   } finally {
     client.release();
   }
 });
-
 
 
 app.put("/api/orders/:id", requireUser, async (req, res) => {
