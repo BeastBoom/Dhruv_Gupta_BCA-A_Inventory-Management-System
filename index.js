@@ -582,19 +582,19 @@ app.post("/api/orders", requireUser, async (req, res) => {
 app.put("/api/orders/:id", requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params; // Order ID to update
-  const { customer_id, items } = req.body;
+  const { customer_id, order_date, items } = req.body;
 
-  // Validate incoming data
-  if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
+  // Validate incoming data: order_date must be provided in "YYYY-MM-DD" format
+  if (!customer_id || !order_date || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid order data" });
   }
-  
+
   const client = await pool.connect();
   try {
     console.log(`Updating order ${id} for user ${userId}`);
     await client.query("BEGIN");
 
-    // Verify the order exists
+    // Verify that the order exists
     const orderCheck = await client.query(
       "SELECT id FROM orders WHERE id = $1 AND user_id = $2",
       [id, userId]
@@ -605,7 +605,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     }
     console.log(`Order ${id} exists; proceeding with update.`);
 
-    // Refund current order items (add back their quantities) and log history
+    // Refund existing order items (add back their quantities) and log history
     const existingResult = await client.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
       [id, userId]
@@ -633,7 +633,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     for (const item of items) {
       const { product_id, quantity } = item;
       const productResult = await client.query(
-        "SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2",
+        "SELECT name, quantity, price FROM products WHERE id = $1 AND user_id = $2",
         [product_id, userId]
       );
       if (productResult.rowCount === 0) {
@@ -659,7 +659,7 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
         `Deducted quantity ${quantity} for order ${id}`,
         userId
       );
-      // Insert new order item record (for the same order id)
+      // Insert new order item record
       await client.query(
         "INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)",
         [id, product_id, quantity, userId]
@@ -667,12 +667,12 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     }
     console.log("Processed new order items");
 
-    // Update the order's customer_id (if needed)
+    // Update the order's customer_id and order_date (explicitly cast order_date to timestamp)
     await client.query(
-      "UPDATE orders SET customer_id = $1 WHERE id = $2 AND user_id = $3",
-      [customer_id, id, userId]
+      "UPDATE orders SET customer_id = $1, order_date = $2::timestamp WHERE id = $3 AND user_id = $4",
+      [customer_id, order_date, id, userId]
     );
-    console.log("Updated order's customer_id");
+    console.log("Updated order's customer_id and order_date");
 
     // Recalculate the order's total value
     await client.query(
