@@ -105,8 +105,7 @@ async function initializeDatabase() {
     console.log('Order_items table is ready');
 
     // Create product_history table
-    // Create product_history table with cascading delete and additional product_name column
-    await pool.query(`
+await pool.query(`
   CREATE TABLE IF NOT EXISTS product_history (
     id SERIAL PRIMARY KEY,
     product_id INT NOT NULL,
@@ -118,7 +117,8 @@ async function initializeDatabase() {
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
   )
 `);
-    console.log('Product_history table is ready');
+console.log('Product_history table is ready');
+
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -127,22 +127,19 @@ async function initializeDatabase() {
 initializeDatabase();
 
 // Helper: Log product history
-async function logProductHistory(
-  product_id,
-  product_name,
-  changeType,
-  changeDetails,
-  user_id,
-) {
+async function logProductHistory(product_id, product_name, change_type, change_details, user_id) {
   try {
     await pool.query(
-      'INSERT INTO product_history (product_id, product_name, change_type, change_details, user_id) VALUES ($1, $2, $3, $4, $5)',
-      [product_id, product_name, changeType, changeDetails, user_id],
+      `INSERT INTO product_history (product_id, product_name, change_type, change_details, user_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [product_id, product_name, change_type, change_details, user_id]
     );
+    console.log(`Product history logged for product_id: ${product_id}, action: ${change_type}`);
   } catch (err) {
-    console.error('Error logging product history:', err);
+    console.error("Error logging product history:", err);
   }
 }
+
 
 /* --------------------
    AUTHENTICATION ENDPOINTS
@@ -294,10 +291,11 @@ app.put('/api/products/:id', requireUser, async (req, res) => {
 
     await logProductHistory(
       id,
+      name,  // Updated product name
       'Product Updated',
       JSON.stringify({ name, quantity, price, category_id }),
-      userId,
-    );
+      userId
+    );    
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error updating product:', err);
@@ -308,6 +306,8 @@ app.put('/api/products/:id', requireUser, async (req, res) => {
 app.delete('/api/products/:id', requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
+  const productResult = await pool.query("SELECT name FROM products WHERE id = $1 AND user_id = $2", [id, userId]);
+  const productName = productResult.rowCount > 0 ? productResult.rows[0].name : "Unknown";
   try {
     await pool.query(
       'DELETE FROM order_items WHERE product_id = $1 AND user_id = $2',
@@ -320,10 +320,11 @@ app.delete('/api/products/:id', requireUser, async (req, res) => {
     if (result.rowCount === 0) return res.status(404).send('Product not found');
     await logProductHistory(
       id,
+      productName,
       'Product Deleted',
       'Product was deleted',
-      userId,
-    );
+      userId
+    );    
     res.json({
       message: 'Product and associated order items deleted successfully',
     });
@@ -612,10 +613,11 @@ app.post('/api/orders', requireUser, async (req, res) => {
       );
       await logProductHistory(
         product_id,
+        product.name,  // Ensure you have the product name available
         'Order Created',
         `Quantity reduced by ${quantity} due to order ${orderId}`,
-        userId,
-      );
+        userId
+      );      
       await client.query(
         'INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)',
         [orderId, product_id, quantity, userId],
@@ -710,10 +712,12 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
       );
       await logProductHistory(
         item.product_id,
+        product.name,  // 'product.name' from the current context
         'Order Edited - Refunded',
         `Refunded quantity ${item.quantity} for order ${id}`,
-        userId,
+        userId
       );
+      
     }
     console.log(
       `Refunded ${existingItems.length} existing order items for order ${id}`,
@@ -763,10 +767,12 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
       );
       await logProductHistory(
         product_id,
+        product.name,  // 'product.name' from the query result
         'Order Edited - Deducted',
         `Deducted quantity ${quantity} for order ${id}`,
-        userId,
+        userId
       );
+      
       // Insert new order item record
       await client.query(
         'INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)',
@@ -777,10 +783,11 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
 
     // Update the order's customer_id and order_date (store order_date as DATE)
     await client.query(
-      'UPDATE orders SET customer_id = $1, order_date = $2 WHERE id = $3 AND user_id = $4',
-      [customer_id, order_date.trim(), id, userId],
+      "UPDATE orders SET customer_id = $1, order_date = $2 WHERE id = $3 AND user_id = $4",
+      [customer_id, order_date.trim(), id, userId]
     );
     console.log("Updated order's customer_id and order_date");
+
 
     // Recalculate the order's total value
     await client.query(
@@ -849,10 +856,12 @@ app.delete('/api/orders/:id', requireUser, async (req, res) => {
       );
       await logProductHistory(
         item.product_id,
+        product.name,  // 'product.name' from the context
         'Order Deleted - Refunded',
         `Refunded quantity ${item.quantity} for deleted order ${id}`,
-        userId,
+        userId
       );
+      
     }
     await client.query(
       'DELETE FROM order_items WHERE order_id = $1 AND user_id = $2',
