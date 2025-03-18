@@ -313,15 +313,18 @@ function deleteOrder(orderId) {
 }
 
 // Order form submission handler
+// Order form submission handler
 document.getElementById("orderForm").addEventListener("submit", function (e) {
   e.preventDefault();
   
   const customer_id = document.getElementById("orderCustomerSelect").value;
-  const order_date = document.getElementById("orderDate").value; // if used
+  const order_date = document.getElementById("orderDate").value; // New: capture the order_date value
   const container = document.getElementById("orderItemsContainer");
   const rows = container.getElementsByClassName("order-item-row");
   const items = [];
   
+  console.log("Order Date:", order_date); // Debug log
+
   for (let row of rows) {
     const productSelect = row.querySelector("select");
     const qtyInput = row.querySelector('input[type="number"]');
@@ -332,15 +335,17 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
     }
   }
   
-  if (!customer_id || items.length === 0) {
+  // Now validate that order_date is not empty along with other fields
+  if (!customer_id || !order_date || items.length === 0) {
     alert("Please fill in all fields.");
     return;
   }
   
-  const orderData = { customer_id, items };
+  // Include order_date in the payload
+  const orderData = { customer_id, order_date, items };
 
-  // If editingOrder is set, use PUT to update; otherwise, use POST to add new order
   if (editingOrder) {
+    // If editing an existing order, send a PUT request
     fetch(`https://inventory-management-system-xtb4.onrender.com/api/orders/${editingOrder.dataset.id}`, {
       method: "PUT",
       headers: {
@@ -358,7 +363,7 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
       .then(data => {
         alert("Order updated successfully!");
         closeOrderModal();
-        fetchOrders(); // Refresh orders list
+        fetchOrders();
         editingOrder = null;
       })
       .catch(err => {
@@ -366,7 +371,8 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
         alert("Error updating order: " + err.message);
       });
   } else {
-    fetch(`https://inventory-management-system-xtb4.onrender.com/api/orders`, {
+    // Otherwise, create a new order with a POST request
+    fetch("https://inventory-management-system-xtb4.onrender.com/api/orders", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -383,7 +389,7 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
       .then(data => {
         alert("Order placed successfully!");
         closeOrderModal();
-        fetchOrders(); // Refresh orders list
+        fetchOrders();
       })
       .catch(err => {
         console.error("Error placing order:", err);
