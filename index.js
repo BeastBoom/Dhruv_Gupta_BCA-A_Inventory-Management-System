@@ -584,29 +584,46 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
   const { id } = req.params; // Order ID to update
   const { customer_id, order_date, items } = req.body;
   
-  // Trim order_date and validate
-  const trimmedOrderDate = order_date ? order_date.trim() : "";
-  if (!customer_id || trimmedOrderDate === "" || !items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ success: false, message: "Invalid order data" });
+  // Validate each field separately and log which one is missing.
+  if (!customer_id) {
+    console.error("Validation Error: Missing customer_id");
+    return res.status(400).json({ success: false, message: "Missing customer_id" });
+  }
+  if (!order_date || order_date.trim() === "") {
+    console.error("Validation Error: Missing or empty order_date");
+    return res.status(400).json({ success: false, message: "Missing order_date" });
+  }
+  if (!items) {
+    console.error("Validation Error: Missing items array");
+    return res.status(400).json({ success: false, message: "Missing items" });
+  }
+  if (!Array.isArray(items)) {
+    console.error("Validation Error: Items is not an array");
+    return res.status(400).json({ success: false, message: "Items must be an array" });
+  }
+  if (items.length === 0) {
+    console.error("Validation Error: Items array is empty");
+    return res.status(400).json({ success: false, message: "Items array is empty" });
   }
   
   const client = await pool.connect();
   try {
-    console.log(`Updating order ${id} for user ${userId} with order_date ${trimmedOrderDate}`);
+    console.log(`Updating order ${id} for user ${userId} with order_date ${order_date}`);
     await client.query("BEGIN");
 
-    // Verify that the order exists for this user
+    // Verify that the order exists
     const orderCheck = await client.query(
       "SELECT id FROM orders WHERE id = $1 AND user_id = $2",
       [id, userId]
     );
     if (orderCheck.rowCount === 0) {
+      console.error(`Order ${id} not found for user ${userId}`);
       await client.query("ROLLBACK");
       return res.status(404).json({ success: false, message: "Order not found" });
     }
     console.log(`Order ${id} exists; proceeding with update.`);
 
-    // Refund existing order items (add back their quantities) and log history
+    // Refund current order items (add back their quantities) and log history
     const existingResult = await client.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2",
       [id, userId]
@@ -638,18 +655,20 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
         [product_id, userId]
       );
       if (productResult.rowCount === 0) {
+        console.error(`Product with id ${product_id} not found for user ${userId}`);
         await client.query("ROLLBACK");
         return res.status(404).json({ success: false, message: `Product with id ${product_id} not found` });
       }
       const product = productResult.rows[0];
       if (parseInt(product.quantity, 10) < parseInt(quantity, 10)) {
+        console.error(`Insufficient stock for ${product.name}: available ${product.quantity}, requested ${quantity}`);
         await client.query("ROLLBACK");
         return res.status(400).json({
           success: false,
           message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`
         });
       }
-      // Deduct the requested quantity from product stock
+      // Deduct the new quantity from product stock
       await client.query(
         "UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3",
         [quantity, product_id, userId]
@@ -668,10 +687,10 @@ app.put("/api/orders/:id", requireUser, async (req, res) => {
     }
     console.log("Processed new order items");
 
-    // Update the order's customer_id and order_date (order_date is stored as DATE)
+    // Update the order's customer_id and order_date (store order_date as DATE)
     await client.query(
       "UPDATE orders SET customer_id = $1, order_date = $2 WHERE id = $3 AND user_id = $4",
-      [customer_id, trimmedOrderDate, id, userId]
+      [customer_id, order_date.trim(), id, userId]
     );
     console.log("Updated order's customer_id and order_date");
 
