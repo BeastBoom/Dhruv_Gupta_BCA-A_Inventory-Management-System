@@ -607,22 +607,31 @@ app.post('/api/orders', requireUser, async (req, res) => {
 
     for (const item of items) {
       const { product_id, quantity } = item;
+      // Deduct the quantity from product stock
       await client.query(
         'UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3',
         [quantity, product_id, userId],
       );
+      // Retrieve product name for logging
+      const prodResult = await client.query(
+        "SELECT name FROM products WHERE id = $1 AND user_id = $2",
+        [product_id, userId]
+      );
+      const prodName = prodResult.rowCount > 0 ? prodResult.rows[0].name : "Unknown";
+      // Log the order creation event with the correct product name
       await logProductHistory(
         product_id,
-        product.name,  // Ensure you have the product name available
+        prodName,
         'Order Created',
         `Quantity reduced by ${quantity} due to order ${orderId}`,
         userId
-      );      
+      );
+      // Insert the order item record
       await client.query(
         'INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)',
         [orderId, product_id, quantity, userId],
       );
-    }
+    }    
     await client.query(
       `UPDATE orders SET order_value = (
          SELECT SUM(p.price * oi.quantity)
@@ -648,8 +657,7 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
   const { id } = req.params; // Order ID to update
   const { customer_id, order_date, items } = req.body;
 
-  // Validate each field separately and log which one is missing.
-  // Validate each field separately
+// Validate incoming data (ensure order_date is present and non‑empty)
 if (!customer_id) {
   console.error('Validation Error: Missing customer_id');
   return res.status(400).json({ success: false, message: 'Missing customer_id' });
@@ -658,10 +666,19 @@ if (!order_date || order_date.trim() === '') {
   console.error('Validation Error: Missing or empty order_date');
   return res.status(400).json({ success: false, message: 'Missing order_date' });
 }
-if (!items || !Array.isArray(items) || items.length === 0) {
-  console.error('Validation Error: Missing items');
+if (!items) {
+  console.error('Validation Error: Missing items array');
+  return res.status(400).json({ success: false, message: 'Missing items' });
+}
+if (!Array.isArray(items)) {
+  console.error('Validation Error: Items is not an array');
+  return res.status(400).json({ success: false, message: 'Items must be an array' });
+}
+if (items.length === 0) {
+  console.error('Validation Error: Items array is empty');
   return res.status(400).json({ success: false, message: 'Items array is empty' });
 }
+
 
 const client = await pool.connect();
 try {
@@ -740,7 +757,7 @@ try {
     await logProductHistory(
       product_id,
       product.name,
-      "Order Edited - Deducted",
+      `Order Edited - Deducted`,
       `Deducted quantity ${quantity} for order ${id}`,
       userId
     );
