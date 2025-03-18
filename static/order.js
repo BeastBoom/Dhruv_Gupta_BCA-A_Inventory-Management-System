@@ -318,12 +318,16 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
   e.preventDefault();
   
   const customer_id = document.getElementById("orderCustomerSelect").value;
-  const order_date = document.getElementById("orderDate").value; // New: capture the order_date value
+  let order_date = document.getElementById("orderDate").value;
   const container = document.getElementById("orderItemsContainer");
   const rows = container.getElementsByClassName("order-item-row");
   const items = [];
   
   console.log("Order Date:", order_date); // Debug log
+
+  if (editingOrder && (!order_date || order_date.trim() === "")) {
+    order_date = new Date(editingOrder.getAttribute("data-order-date")).toISOString().split("T")[0];
+  }
 
   for (let row of rows) {
     const productSelect = row.querySelector("select");
