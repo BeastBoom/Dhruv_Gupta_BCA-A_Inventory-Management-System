@@ -9,6 +9,42 @@ const bcrypt = require('bcrypt');
 const app = express();
 const PORT = process.env.PG_PORT || 5432;
 
+const fetch = require('node-fetch');
+
+// Validate email via a third-party API (e.g., mailboxlayer)
+async function validateEmailWithAPI(email) {
+  const apiKey = process.env.EMAIL_VALIDATION_API_KEY;
+  const url = `http://apilayer.net/api/check?access_key=${apiKey}&email=${encodeURIComponent(email)}&smtp=1&format=1`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Email validation request failed: ${response.status}`);
+    const data = await response.json();
+    // data.format_valid and data.smtp_check indicate likely validity
+    return data.format_valid && data.smtp_check;
+  } catch (err) {
+    console.error("Error validating email:", err);
+    return false;
+  }
+}
+
+// Validate phone via a third-party API (e.g., numverify)
+async function validatePhoneWithAPI(phoneNumber) {
+  const apiKey = process.env.PHONE_VALIDATION_API_KEY;
+  const url = `http://apilayer.net/api/validate?access_key=${apiKey}&number=${encodeURIComponent(phoneNumber)}&format=1`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Phone validation request failed: ${response.status}`);
+    const data = await response.json();
+    // data.valid indicates whether the phone is valid
+    return data.valid === true;
+  } catch (err) {
+    console.error("Error validating phone:", err);
+    return false;
+  }
+}
+
 // Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json());
@@ -164,6 +200,11 @@ app.post('/api/signup', async (req, res) => {
       .status(400)
       .json({ success: false, message: 'Invalid email format.' });
   }
+
+  const emailIsValid = await validateEmailWithAPI(email);
+if (!emailIsValid) {
+  return res.status(400).json({ success: false, message: "Invalid admin email address." });
+}
 
   // Password validation: Minimum 8 characters, with uppercase, lowercase, digit, special character
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
@@ -463,6 +504,18 @@ app.post('/api/customers', requireUser, async (req, res) => {
   const { name, customer_number, email } = req.body;
   if (!name || !customer_number) {
     return res.status(400).send('Name and Customer Number are required');
+  }
+
+  if (email) {
+    const emailIsValid = await validateEmailWithAPI(email);
+    if (!emailIsValid) {
+      return res.status(400).json({ success: false, message: "Invalid customer email." });
+    }
+  }
+
+  const phoneIsValid = await validatePhoneWithAPI(customer_number);
+  if (!phoneIsValid) {
+    return res.status(400).json({ success: false, message: "Invalid phone number." });
   }
   try {
     const result = await pool.query(
