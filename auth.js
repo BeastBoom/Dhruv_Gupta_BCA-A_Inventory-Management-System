@@ -5,16 +5,23 @@ const signUpButton = document.getElementById('signUp');
 const signInButton = document.getElementById('signIn');
 const container = document.getElementById('container');
 
-if (signUpButton && signInButton && container) {
-  signUpButton.addEventListener('click', () => {
-    container.classList.add("right-panel-active");
-  });
-  signInButton.addEventListener('click', () => {
-    container.classList.remove("right-panel-active");
-  });
-} else {
-  console.error("Toggle buttons or container not found.");
-}
+signUpButton.addEventListener('click', () => {
+  container.classList.add("right-panel-active");
+  // Clear the login form when switching to sign-up view
+  const loginForm = document.getElementById("login-form");
+  if (loginForm) {
+    loginForm.reset();
+  }
+});
+
+signInButton.addEventListener('click', () => {
+  container.classList.remove("right-panel-active");
+  // Clear the signup form when switching to sign-in view
+  const signupForm = document.getElementById("signup-form");
+  if (signupForm) {
+    signupForm.reset();
+  }
+});
 
 // Wait for the DOM to load before attaching form handlers
 document.addEventListener("DOMContentLoaded", () => {
@@ -136,3 +143,95 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("Signup form (id='signupForm') not found in the DOM.");
   }
 });
+
+// --- Login Password Toggle with Dynamic Visibility ---
+const loginPasswordInput = document.getElementById("login-password");
+const loginToggle = document.getElementById("login-toggle");
+if (loginPasswordInput && loginToggle) {
+  function updateLoginToggleVisibility() {
+    loginToggle.style.display = loginPasswordInput.value.trim() === "" ? "none" : "block";
+  }
+  loginPasswordInput.addEventListener("input", updateLoginToggleVisibility);
+  loginPasswordInput.addEventListener("focus", updateLoginToggleVisibility);
+  // Prevent the input from losing focus when clicking the icon
+  loginToggle.addEventListener("mousedown", (e) => { e.preventDefault(); });
+  loginPasswordInput.addEventListener("blur", () => {
+    // Delay hiding to check if the toggle is focused
+    setTimeout(() => {
+      if (document.activeElement !== loginToggle) {
+        loginPasswordInput.type = "password";
+        loginToggle.style.display = "none";
+      }
+    }, 100);
+  });
+  updateLoginToggleVisibility();
+  loginToggle.addEventListener("click", () => {
+    if (loginPasswordInput.type === "password") {
+      loginPasswordInput.type = "text";
+      loginToggle.innerHTML = '<i class="fa fa-eye-slash"></i>';
+    } else {
+      loginPasswordInput.type = "password";
+      loginToggle.innerHTML = '<i class="fa fa-eye"></i>';
+    }
+  });
+}
+
+// --- Signup Password Toggle with Dynamic Visibility ---
+const signupPasswordInput = document.getElementById("signup-password");
+const signupToggle = document.getElementById("signup-toggle");
+if (signupPasswordInput && signupToggle) {
+  function updateSignupToggleVisibility() {
+    signupToggle.style.display = signupPasswordInput.value.trim() === "" ? "none" : "block";
+  }
+  signupPasswordInput.addEventListener("input", updateSignupToggleVisibility);
+  signupPasswordInput.addEventListener("focus", updateSignupToggleVisibility);
+  signupToggle.addEventListener("mousedown", (e) => { e.preventDefault(); });
+  signupPasswordInput.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (document.activeElement !== signupToggle) {
+        signupPasswordInput.type = "password";
+        signupToggle.style.display = "none";
+      }
+    }, 100);
+  });
+  updateSignupToggleVisibility();
+  signupToggle.addEventListener("click", () => {
+    if (signupPasswordInput.type === "password") {
+      signupPasswordInput.type = "text";
+      signupToggle.innerHTML = '<i class="fa fa-eye-slash"></i>';
+    } else {
+      signupPasswordInput.type = "password";
+      signupToggle.innerHTML = '<i class="fa fa-eye"></i>';
+    }
+  });
+}
+
+// --- Signup Confirm Password Toggle with Dynamic Visibility ---
+const signupConfirmInput = document.getElementById("signup-confirm-password");
+const signupConfirmToggle = document.getElementById("signup-confirm-toggle");
+if (signupConfirmInput && signupConfirmToggle) {
+  function updateSignupConfirmToggleVisibility() {
+    signupConfirmToggle.style.display = signupConfirmInput.value.trim() === "" ? "none" : "block";
+  }
+  signupConfirmInput.addEventListener("input", updateSignupConfirmToggleVisibility);
+  signupConfirmInput.addEventListener("focus", updateSignupConfirmToggleVisibility);
+  signupConfirmToggle.addEventListener("mousedown", (e) => { e.preventDefault(); });
+  signupConfirmInput.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (document.activeElement !== signupConfirmToggle) {
+        signupConfirmInput.type = "password";
+        signupConfirmToggle.style.display = "none";
+      }
+    }, 100);
+  });
+  updateSignupConfirmToggleVisibility();
+  signupConfirmToggle.addEventListener("click", () => {
+    if (signupConfirmInput.type === "password") {
+      signupConfirmInput.type = "text";
+      signupConfirmToggle.innerHTML = '<i class="fa fa-eye-slash"></i>';
+    } else {
+      signupConfirmInput.type = "password";
+      signupConfirmToggle.innerHTML = '<i class="fa fa-eye"></i>';
+    }
+  });
+}
