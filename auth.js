@@ -1,5 +1,22 @@
 "use strict";
 
+const fetch = window.fetch || require('node-fetch'); // Use node-fetch if needed
+
+async function validateEmailWithAPI(email) {
+  const apiKey = process.env.EMAIL_VALIDATION_API_KEY; // ensure this is set in your .env
+  const url = `http://apilayer.net/api/check?access_key=${apiKey}&email=${encodeURIComponent(email)}&smtp=1&format=1`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Email validation request failed: ${response.status}`);
+    const data = await response.json();
+    // Returns true only if both format and SMTP checks are positive
+    return data.format_valid && data.smtp_check;
+  } catch (err) {
+    console.error("Error validating email:", err);
+    return false;
+  }
+}
+
 // Toggle between login and signup views
 const signUpButton = document.getElementById('signUp');
 const signInButton = document.getElementById('signIn');
@@ -53,80 +70,80 @@ document.addEventListener("DOMContentLoaded", () => {
   // Signup form handling – note the ID is "signup-form" (with a dash) in your HTML.
   const signupForm = document.getElementById("signup-form");
   if (signupForm) {
-    signupForm.addEventListener("submit", (e) => {
+    signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       // Retrieve input elements
-      const usernameEl = document.getElementById("signup-username");
       const emailEl = document.getElementById("signup-email");
+      const usernameEl = document.getElementById("signup-username");
       const passwordEl = document.getElementById("signup-password");
       const confirmPasswordEl = document.getElementById("signup-confirm-password");
 
       // Check that all elements exist
-      if (!usernameEl || !emailEl || !passwordEl || !confirmPasswordEl) {
+      if (!emailEl || !usernameEl || !passwordEl || !confirmPasswordEl) {
         alert("One or more signup fields are missing. Please refresh the page.");
         return;
       }
 
-      // Get values and trim where necessary
-      const username = usernameEl.value.trim();
+      // Get trimmed values
       const email = emailEl.value.trim();
+      const username = usernameEl.value.trim();
       const password = passwordEl.value;
       const confirmPassword = confirmPasswordEl.value;
 
-      // Validate username: must be at least 3 characters
+      // Client-side validations
       if (username.length < 3) {
         alert("Username must be at least 3 characters long.");
         return;
       }
-
-      // Validate email using regex
+      // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         alert("Please enter a valid email address.");
         return;
       }
-
-      // Validate password: Minimum 8 characters, at least one uppercase, one lowercase, one digit, and one special character
+      // Validate password complexity: minimum 8 characters, with uppercase, lowercase, digit, and special character.
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
       if (!passwordRegex.test(password)) {
-        alert("Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a digit, and a special character.");
+        alert("Password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character.");
         return;
       }
-
-      // Validate confirm password matches
+      // Confirm password check
       if (password !== confirmPassword) {
         alert("Passwords do not match.");
         return;
       }
 
-      // All validations passed; send signup request to backend
-      fetch("https://inventory-management-system-xtb4.onrender.com/api/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
-      })
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error(`HTTP error! Status: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then((data) => {
-          if (data.success) {
-            alert("Signup successful! Please log in.");
-            // Optionally, switch back to login view
-            container.classList.remove("right-panel-active");
-          } else {
-            alert("Signup failed: " + data.message);
-          }
-        })
-        .catch((err) => {
-          console.error("Error signing up:", err);
-          alert("Signup failed due to an error.");
+      // Call external API to validate email
+      const emailIsValid = await validateEmailWithAPI(email);
+      if (!emailIsValid) {
+        alert("The provided email address appears to be invalid.");
+        return;
+      }
+
+      // Proceed with signup request
+      try {
+        const response = await fetch("https://inventory-management-system-xtb4.onrender.com/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password }),
         });
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.success) {
+          alert("Signup successful! Please log in.");
+          window.location.href = "index.html"; // or redirect to login view
+        } else {
+          alert("Signup failed: " + data.message);
+        }
+      } catch (err) {
+        console.error("Error signing up:", err);
+        alert("Signup failed due to an error.");
+      }
     });
   } else {
-    console.error("Signup form (id='signup-form') not found.");
+    console.error("Signup form (id='signupForm') not found in the DOM.");
   }
 });

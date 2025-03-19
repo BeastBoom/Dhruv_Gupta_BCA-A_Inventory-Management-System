@@ -56,8 +56,26 @@ function closeCustomerModal() {
 function openCustomerEditModal(button) {
   const row = button.closest('tr');
   const cells = row.cells;
+  
+  // Get full phone number from the table cell
+  const fullNumber = cells[1].textContent.trim();
+  // Default: assume numbers stored in the table include country code,
+  // e.g., "+911234567890". Split into country code and local part.
+  let countryCode = "+91"; // Default country code if not found
+  let localNumber = fullNumber;
+  if (fullNumber.startsWith("+91")) {
+    countryCode = "+91";
+    localNumber = fullNumber.substring(3);
+  }
+  // If you support other codes, add additional logic here
+  
+  // Prepopulate form fields:
   document.getElementById('customerName').value = cells[0].textContent;
-  document.getElementById('customerNumber').value = cells[1].textContent.trim();
+
+  document.getElementById('customerNumber').value = localNumber;
+
+  document.getElementById('countryCodeSelect').value = countryCode;
+  
   const emailText = cells[2].textContent.trim();
   document.getElementById('customerEmail').value = (emailText === 'N/A') ? '' : emailText;
   editingCustomer = row;
@@ -93,24 +111,24 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
   const customerData = { customer_number: customerNumber, name, email };
 
   // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (email && !emailRegex.test(email)) {
-    alert("Please enter a valid customer email address.");
-    return;
-  }
-  
-  // Phone number validation for India (example: 10 digits, with +91)
-  const phoneRegex = /^\+91\d{10}$/; // adjust regex for your supported countries
-  if (!phoneRegex.test(fullPhone)) {
-    alert("Please enter a valid phone number (e.g., +911234567890).");
-    return;
-  }
-  
-  // Name and other fields validation
-  if (name.length === 0) {
-    alert("Customer name cannot be empty.");
-    return;
-  }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      alert("Please enter a valid customer email address.");
+      return;
+    }
+    
+    // Phone number validation for India (example: 10 digits, with +91)
+    const phoneRegex = /^\+91\d{10}$/; // adjust regex for your supported countries
+    if (!phoneRegex.test(fullPhone)) {
+      alert("Please enter a valid phone number (e.g., +911234567890).");
+      return;
+    }
+    
+    // Name and other fields validation
+    if (name.length === 0) {
+      alert("Customer name cannot be empty.");
+      return;
+    }
   
   if (editingCustomer) {
     fetch(`https://inventory-management-system-xtb4.onrender.com/api/customers/${editingCustomer.getAttribute('data-id')}`, {
