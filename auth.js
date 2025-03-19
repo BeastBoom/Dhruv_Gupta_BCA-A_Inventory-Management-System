@@ -1,22 +1,5 @@
 "use strict";
 
-const fetch = window.fetch || require('node-fetch'); // Use node-fetch if needed
-
-async function validateEmailWithAPI(email) {
-  const apiKey = process.env.EMAIL_VALIDATION_API_KEY; // ensure this is set in your .env
-  const url = `http://apilayer.net/api/check?access_key=${apiKey}&email=${encodeURIComponent(email)}&smtp=1&format=1`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Email validation request failed: ${response.status}`);
-    const data = await response.json();
-    // Returns true only if both format and SMTP checks are positive
-    return data.format_valid && data.smtp_check;
-  } catch (err) {
-    console.error("Error validating email:", err);
-    return false;
-  }
-}
-
 // Toggle between login and signup views
 const signUpButton = document.getElementById('signUp');
 const signInButton = document.getElementById('signIn');
@@ -73,51 +56,57 @@ document.addEventListener("DOMContentLoaded", () => {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      // Retrieve input elements
+      // Retrieve form field values
       const emailEl = document.getElementById("signup-email");
       const usernameEl = document.getElementById("signup-username");
       const passwordEl = document.getElementById("signup-password");
       const confirmPasswordEl = document.getElementById("signup-confirm-password");
 
-      // Check that all elements exist
       if (!emailEl || !usernameEl || !passwordEl || !confirmPasswordEl) {
         alert("One or more signup fields are missing. Please refresh the page.");
         return;
       }
 
-      // Get trimmed values
       const email = emailEl.value.trim();
       const username = usernameEl.value.trim();
       const password = passwordEl.value;
       const confirmPassword = confirmPasswordEl.value;
 
-      // Client-side validations
+      // Basic validations
       if (username.length < 3) {
         alert("Username must be at least 3 characters long.");
         return;
       }
-      // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         alert("Please enter a valid email address.");
         return;
       }
-      // Validate password complexity: minimum 8 characters, with uppercase, lowercase, digit, and special character.
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
       if (!passwordRegex.test(password)) {
         alert("Password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character.");
         return;
       }
-      // Confirm password check
       if (password !== confirmPassword) {
         alert("Passwords do not match.");
         return;
       }
 
-      // Call external API to validate email
-      const emailIsValid = await validateEmailWithAPI(email);
-      if (!emailIsValid) {
-        alert("The provided email address appears to be invalid.");
+      // Call your backend endpoint to validate the email
+      try {
+        const validationResponse = await fetch("https://inventory-management-system-xtb4.onrender.com/api/validate-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const validationData = await validationResponse.json();
+        if (!validationData.success || !validationData.valid) {
+          alert("The provided email address appears to be invalid.");
+          return;
+        }
+      } catch (err) {
+        console.error("Error during email validation:", err);
+        alert("Email validation failed.");
         return;
       }
 
@@ -134,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await response.json();
         if (data.success) {
           alert("Signup successful! Please log in.");
-          window.location.href = "index.html"; // or redirect to login view
+          window.location.href = "index.html";
         } else {
           alert("Signup failed: " + data.message);
         }

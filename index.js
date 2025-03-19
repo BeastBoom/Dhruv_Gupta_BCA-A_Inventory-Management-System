@@ -869,6 +869,34 @@ app.delete('/api/orders/:id', requireUser, async (req, res) => {
   }
 });
 
+/* ---------- EMAIL VALIDATION API ---------- */
+const fetch = require("node-fetch");
+app.post("/api/validate-email", async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Email is required." });
+  }
+  try {
+    const apiKey = process.env.EMAIL_VALIDATION_API_KEY; // remains private on the server
+    const url = `http://apilayer.net/api/check?access_key=${apiKey}&email=${encodeURIComponent(email)}&smtp=1&format=1`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return res.status(500).json({ success: false, message: `Email validation request failed: ${response.status}` });
+    }
+    const data = await response.json();
+    // Return the validation result
+    return res.json({
+      success: true,
+      valid: data.format_valid && data.smtp_check,
+      details: data,
+    });
+  } catch (err) {
+    console.error("Error validating email:", err);
+    return res.status(500).json({ success: false, message: "Error validating email." });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
