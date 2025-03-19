@@ -83,10 +83,34 @@ async function deleteCustomer(customerId) {
 
 document.getElementById("customerForm").addEventListener("submit", function(e) {
   e.preventDefault();
+
   const name = document.getElementById("customerName").value;
-  const customerNumber = document.getElementById('customerNumber').value;
+  const phoneLocal = document.getElementById('customerNumber').value;
+  const countryCode = document.getElementById('countryCodeSelect').value;
+  const fullPhone = `${countryCode}${phoneLocal}`;
+  const customerNumber = fullPhone;
   const email = document.getElementById("customerEmail").value;
   const customerData = { customer_number: customerNumber, name, email };
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (email && !emailRegex.test(email)) {
+    alert("Please enter a valid customer email address.");
+    return;
+  }
+  
+  // Phone number validation for India (example: 10 digits, with +91)
+  const phoneRegex = /^\+91\d{10}$/; // adjust regex for your supported countries
+  if (!phoneRegex.test(fullPhone)) {
+    alert("Please enter a valid phone number (e.g., +911234567890).");
+    return;
+  }
+  
+  // Name and other fields validation
+  if (name.length === 0) {
+    alert("Customer name cannot be empty.");
+    return;
+  }
   
   if (editingCustomer) {
     fetch(`https://inventory-management-system-xtb4.onrender.com/api/customers/${editingCustomer.getAttribute('data-id')}`, {
