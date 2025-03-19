@@ -6,6 +6,7 @@ dotenv.config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const fetch = require("node-fetch");
 const app = express();
 const PORT = process.env.PG_PORT || 5432;
 
@@ -870,21 +871,28 @@ app.delete('/api/orders/:id', requireUser, async (req, res) => {
 });
 
 /* ---------- EMAIL VALIDATION API ---------- */
-const fetch = require("node-fetch");
+
 app.post("/api/validate-email", async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ success: false, message: "Email is required." });
   }
+  const apiKey = process.env.EMAIL_VALIDATION_API_KEY;
+  if (!apiKey) {
+    console.error("EMAIL_VALIDATION_API_KEY is not set.");
+    return res.status(500).json({ success: false, message: "Server configuration error: Missing API key." });
+  }
+  const url = `https://apilayer.net/api/check?access_key=${apiKey}&email=${encodeURIComponent(email)}&smtp=1&format=1`;
+  console.log("Calling email validation API:", url);
   try {
-    const apiKey = process.env.EMAIL_VALIDATION_API_KEY; // remains private on the server
-    const url = `http://apilayer.net/api/check?access_key=${apiKey}&email=${encodeURIComponent(email)}&smtp=1&format=1`;
     const response = await fetch(url);
     if (!response.ok) {
+      console.error("Email validation API error:", response.status);
       return res.status(500).json({ success: false, message: `Email validation request failed: ${response.status}` });
     }
     const data = await response.json();
-    // Return the validation result
+    console.log("Email validation API returned:", data);
+    // Return true only if both format_valid and smtp_check are true
     return res.json({
       success: true,
       valid: data.format_valid && data.smtp_check,
