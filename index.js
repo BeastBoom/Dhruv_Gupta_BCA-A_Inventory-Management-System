@@ -105,6 +105,19 @@ async function initializeDatabase() {
     `);
     console.log('Order_items table is ready');
 
+    // Create Vendors Table
+    await pool.query(`
+  CREATE TABLE IF NOT EXISTS vendors (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    supply_area VARCHAR(255),
+    phone VARCHAR(20),
+    user_id INT NOT NULL
+  )
+`);
+    console.log('Vendors table is ready');
+
     // Create product_history table
     await pool.query(`
   CREATE TABLE IF NOT EXISTS product_history (
@@ -113,7 +126,7 @@ async function initializeDatabase() {
     product_name VARCHAR(255),
     change_type VARCHAR(50) NOT NULL,
     change_details TEXT,
-    changed_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'),
+    changed_at TIMESTAMPZ DEFAULT NOW(),
     user_id INT NOT NULL,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
   )
@@ -523,6 +536,79 @@ app.delete('/api/customers/:id', requireUser, async (req, res) => {
   }
 });
 
+/* ---------- VENDORS API ---------- */
+app.get('/api/vendors', requireUser, async (req, res) => {
+  const userId = req.userId;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM vendors WHERE user_id = $1 ORDER BY id ASC`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching vendors:', err);
+    res.status(500).send('Error fetching vendors');
+  }
+});
+
+app.post('/api/vendors', requireUser, async (req, res) => {
+  const userId = req.userId;
+  const { name, email, supply_area, phone } = req.body;
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Vendor name is required' });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO vendors (name, email, supply_area, phone, user_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [name, email || null, supply_area || null, phone || null, userId]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error adding vendor:', err);
+    res.status(500).send('Error adding vendor');
+  }
+});
+
+app.put('/api/vendors/:id', requireUser, async (req, res) => {
+  const userId = req.userId;
+  const { id } = req.params;
+  const { name, email, supply_area, phone } = req.body;
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Vendor name is required' });
+  }
+  try {
+    const result = await pool.query(
+      `UPDATE vendors SET name = $1, email = $2, supply_area = $3, phone = $4
+       WHERE id = $5 AND user_id = $6 RETURNING *`,
+      [name, email || null, supply_area || null, phone || null, id, userId]
+    );
+    if (result.rowCount === 0) return res.status(404).send('Vendor not found');
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating vendor:', err);
+    res.status(500).send('Error updating vendor');
+  }
+});
+
+app.delete('/api/vendors/:id', requireUser, async (req, res) => {
+  const userId = req.userId;
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `DELETE FROM vendors WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+    if (result.rowCount === 0) return res.status(404).send('Vendor not found');
+    res.json({ message: 'Vendor deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting vendor:', err);
+    res.status(500).send('Error deleting vendor');
+  }
+});
+
+
 /* ---------- ORDERS API ---------- */
 app.get('/api/orders', requireUser, async (req, res) => {
   const userId = req.userId;
@@ -764,12 +850,10 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
           `Product with id ${product_id} not found for user ${userId}`,
         );
         await client.query('ROLLBACK');
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: `Product with id ${product_id} not found`,
-          });
+        return res.status(404).json({
+          success: false,
+          message: `Product with id ${product_id} not found`,
+        });
       }
       const product = productResult.rows[0];
       if (parseInt(product.quantity, 10) < parseInt(quantity, 10)) {
@@ -913,12 +997,10 @@ app.post('/api/validate-email', async (req, res) => {
   const apiKey = process.env.EMAIL_VALIDATION_API_KEY;
   if (!apiKey) {
     console.error('EMAIL_VALIDATION_API_KEY is not set.');
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: 'Server configuration error: Missing API key.',
-      });
+    return res.status(500).json({
+      success: false,
+      message: 'Server configuration error: Missing API key.',
+    });
   }
   const url = `https://apilayer.net/api/check?access_key=${apiKey}&email=${encodeURIComponent(email)}&smtp=1&format=1`;
   console.log('Calling email validation API:', url);
@@ -926,12 +1008,10 @@ app.post('/api/validate-email', async (req, res) => {
     const response = await fetch(url);
     if (!response.ok) {
       console.error('Email validation API error:', response.status);
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message: `Email validation request failed: ${response.status}`,
-        });
+      return res.status(500).json({
+        success: false,
+        message: `Email validation request failed: ${response.status}`,
+      });
     }
     const data = await response.json();
     console.log('Email validation API returned:', data);
@@ -946,6 +1026,32 @@ app.post('/api/validate-email', async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: 'Error validating email.' });
+  }
+});
+
+app.post("/api/validate-phone", async (req, res) => {
+  const { phone } = req.body;
+  if (!phone || phone.length !== 10 || isNaN(phone)) {
+    return res.status(400).json({ success: false, message: "Invalid phone format. Must be 10 digits." });
+  }
+  const apiKey = process.env.PHONE_VALIDATION_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ success: false, message: "Server misconfiguration: API key missing." });
+  }
+  // Assuming you are validating for Indian phone numbers; you may change country_code if needed
+  const url = `http://apilayer.net/api/validate?access_key=${apiKey}&number=${encodeURIComponent(phone)}&country_code=IN&format=1`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Phone validation request failed: ${response.status}`);
+    const data = await response.json();
+    if (data.valid) {
+      res.json({ success: true, valid: true, country: data.country_name });
+    } else {
+      res.json({ success: false, valid: false, message: "Invalid phone number." });
+    }
+  } catch (error) {
+    console.error("Error validating phone:", error);
+    res.status(500).json({ success: false, message: "Phone validation service error." });
   }
 });
 

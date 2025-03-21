@@ -1,18 +1,13 @@
-/* ------------------------- */
-/*        General Styles     */
-/* ------------------------- */
+/* General Styles */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
-  transition:
-    color 0.3s;
+  transition: color 0.3s;
 }
 
-/* ------------------------- */
-/*   Category Management     */
-/* ------------------------- */
-.category-management {
+/* Vendor Management Styles */
+.vendors-management {
   padding: 20px;
   background-color: #fff;
   border-radius: 8px;
@@ -29,31 +24,29 @@ body {
   overflow-x: auto;
 }
 
-.category-table {
+.vendors-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 15px;
 }
 
-.category-table th,
-.category-table td {
+.vendors-table th,
+.vendors-table td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #ddd;
 }
 
-.category-table th {
+.vendors-table th {
   background-color: #f5f5f5;
   font-weight: 600;
 }
 
-.category-table tr:hover {
+.vendors-table tr:hover {
   background-color: #f9f9f9;
 }
 
-/* ------------------------- */
-/*         Buttons           */
-/* ------------------------- */
+/* ---------- Buttons ---------- */
 .btn {
   padding: 8px 16px;
   border: none;
@@ -65,7 +58,7 @@ body {
 }
 
 .btn-add {
-  background-color: #4caf50;
+  background-color: #4CAF50;
   color: white;
 }
 
@@ -74,12 +67,21 @@ body {
 }
 
 .btn-edit {
-  background-color: #2196f3;
+  background-color: #2196F3;
   color: white;
 }
 
 .btn-edit:hover {
   background-color: #1e88e5;
+}
+
+.btn-delete {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #e53935;
 }
 
 .btn-cancel {
@@ -92,7 +94,7 @@ body {
 }
 
 .btn-save {
-  background-color: #4caf50;
+  background-color: #4CAF50;
   color: white;
 }
 
@@ -100,19 +102,7 @@ body {
   background-color: #45a049;
 }
 
-.btn-delete {
-  background-color: #f44336;
-  color: white;
-  margin-left: 8px;
-}
-
-.btn-delete:hover {
-  background-color: #e53935;
-}
-
-/* ------------------------- */
-/*          Modal            */
-/* ------------------------- */
+/* ---------- Modals ---------- */
 .modal {
   display: none;
   position: fixed;
@@ -120,7 +110,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0,0,0,0.5);
   z-index: 1000;
 }
 
@@ -146,9 +136,7 @@ body {
   color: #f44336;
 }
 
-/* ------------------------- */
-/*       Form Elements       */
-/* ------------------------- */
+/* ---------- Form Styles ---------- */
 .form-group {
   margin-bottom: 15px;
 }
@@ -167,7 +155,7 @@ body {
   border-radius: 4px;
 }
 
-/* Disable resizing for textarea */
+/* Disable resizing for textareas */
 .form-group textarea {
   resize: none;
 }
@@ -179,78 +167,7 @@ body {
   justify-content: flex-end;
 }
 
-/* ------------------------- */
-/*      Dark Theme           */
-/* ------------------------- */
-body.dark-theme {
-  background-color: #111010;
-  color: #ffffff;
-}
-
-body.dark-theme .sidebar {
-  background-color: #0d0707;
-}
-
-body.dark-theme .main-content {
-  background-color: #111010;
-}
-
-body.dark-theme .category-management {
-  background-color: #2c2c2c;
-  color: #fff;
-}
-
-body.dark-theme .modal-content {
-  background-color: #2c2c2c;
-  color: #ffffff;
-}
-
-body.dark-theme .category-table th {
-  background-color: #333;
-}
-
-body.dark-theme .category-table tr:hover {
-  background-color: #3a3a3a;
-}
-
-body.dark-theme .form-group input,
-body.dark-theme .form-group textarea {
-  background-color: #444;
-  border-color: #555;
-  color: #fff;
-}
-
-body.dark-theme .form-group label {
-  color: #ffffff;
-}
-
-body.dark-theme .btn-add {
-  background-color: #388e3c;
-}
-
-body.dark-theme .btn-edit {
-  background-color: #1976d2;
-}
-
-body.dark-theme .btn-delete {
-  background-color: #d32f2f;
-}
-
-body.dark-theme .btn-cancel {
-  background-color: #d32f2f;
-}
-
-body.dark-theme .btn-save {
-  background-color: #388e3c;
-}
-
-body.dark-theme .modal {
-  background-color: rgba(0, 0, 0, 0.7);
-}
-
-/* ------------------------- */
-/*         Sidebar           */
-/* ------------------------- */
+/* Sidebar Styles */
 #logo-image {
   height: 65px;
   display: block;
@@ -303,6 +220,7 @@ body.dark-theme .modal {
   margin-right: 10px;
 }
 
+
 /* Hide menu text by default */
 .sidebar ul li a .menu-text {
   display: none;
@@ -324,9 +242,7 @@ body.dark-theme .modal {
   width: 100%;
 }
 
-/* ------------------------- */
-/*       Main Content        */
-/* ------------------------- */
+/* Main Content Styles */
 .main-content {
   margin-left: 60px;
   padding: 20px;
@@ -337,9 +253,11 @@ body.dark-theme .modal {
   margin-left: 200px;
 }
 
+
 /* ------------------------- */
 /*          Header           */
 /* ------------------------- */
+
 header {
   display: flex;
   justify-content: space-between;
@@ -352,4 +270,74 @@ header {
   border: none;
   font-size: 24px;
   cursor: pointer;
+}
+
+/* ------------------------- */
+/*      Dark Theme           */
+/* ------------------------- */
+body.dark-theme {
+  background-color: #111010;
+  color: #ffffff;
+}
+
+body.dark-theme .sidebar {
+  background-color: #0d0707;
+}
+
+body.dark-theme .main-content {
+  background-color: #111010;
+}
+
+
+body.dark-theme .vendors-management {
+  background-color: #2c2c2c;
+  color: #fff;
+}
+
+body.dark-theme .modal-content {
+  background-color: #2c2c2c;
+  color: #ffffff;
+}
+
+body.dark-theme .vendors-table th {
+  background-color: #333;
+}
+
+body.dark-theme .vendors-table tr:hover {
+  background-color: #3a3a3a;
+}
+
+body.dark-theme .form-group input,
+body.dark-theme .form-group textarea {
+  background-color: #444;
+  border-color: #555;
+  color: #fff;
+}
+
+body.dark-theme .form-group label {
+  color: #ffffff;
+}
+
+body.dark-theme .btn-add {
+  background-color: #388e3c;
+}
+
+body.dark-theme .btn-edit {
+  background-color: #1976d2;
+}
+
+body.dark-theme .btn-delete {
+  background-color: #d32f2f;
+}
+
+body.dark-theme .btn-cancel {
+  background-color: #d32f2f;
+}
+
+body.dark-theme .btn-save {
+  background-color: #388e3c;
+}
+
+body.dark-theme .modal {
+  background-color: rgba(0, 0, 0, 0.7);
 }

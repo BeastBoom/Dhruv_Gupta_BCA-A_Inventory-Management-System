@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Category Management</title>
-  <link rel="stylesheet" href="../static/categories.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vendors Management</title>
+  <link rel="stylesheet" href="../static/vendors.css">
 </head>
 <body>
   <!-- Sidebar -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <img src="../images/images.png" alt="Your Logo" id = "logo-image">
-      <!-- <span class="logo-text">YourBrand</span> -->
+      <img src="../images/images.png" alt="Your Logo" id="logo-image">
     </div>
     <button class="menu-toggle" id="menu-toggle">☰</button>
     <ul>
@@ -28,59 +27,64 @@
       <li><a href="#"><span>⚙️</span><span class="menu-text">Settings</span></a></li>
     </ul>
   </div>
-
+  
   <!-- Main Content -->
   <div class="main-content" id="main-content">
     <header>
-      <h1>Category Management</h1>
+      <h1>Vendors Management</h1>
       <button id="theme-toggle">🌙</button>
     </header>
-    <section class="category-management">
+    <section class="vendors-management">
       <div class="header-actions">
-        <button class="btn btn-add" onclick="openCategoryModal()">+ Add Category</button>
+        <button class="btn btn-add" onclick="openVendorModal()">+ Add Vendor</button>
       </div>
       <div class="table-container">
-        <table class="category-table">
+        <table class="vendors-table">
           <thead>
             <tr>
-              <th>Category Name</th>
-              <th>Description</th>
-              <th>Products</th>
+              <th>Vendor Name</th>
+              <th>Email</th>
+              <th>Supply Area</th>
+              <th>Phone</th>
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="categoryTableBody"></tbody>
+          <tbody id="vendorsTableBody"></tbody>
         </table>
       </div>
     </section>
     
-    <!-- Category Modal -->
-    <div id="categoryModal" class="modal">
+    <!-- Vendor Modal -->
+    <div id="vendorModal" class="modal">
       <div class="modal-content">
-        <span class="close" onclick="closeCategoryModal()">&times;</span>
-        <h2 id="categoryModalTitle">Add New Category</h2>
-        <form id="categoryForm">
+        <span class="close" onclick="closeVendorModal()">&times;</span>
+        <h2 id="vendorModalTitle">Add New Vendor</h2>
+        <form id="vendorForm">
           <div class="form-group">
-            <label for="categoryName">Category Name:</label>
-            <input type="text" id="categoryName" name="categoryName" required>
+            <label for="vendorName">Vendor Name:</label>
+            <input type="text" id="vendorName" name="vendorName" required>
           </div>
           <div class="form-group">
-            <label for="categoryDescription">Description:</label>
-            <textarea id="categoryDescription" name="categoryDescription" required></textarea>
+            <label for="vendorEmail">Email:</label>
+            <input type="email" id="vendorEmail" name="vendorEmail">
           </div>
           <div class="form-group">
-            <label for="categoryProducts">Products (comma-separated IDs):</label>
-            <input type="text" id="categoryProducts" name="categoryProducts">
+            <label for="vendorSupply">Supply Area:</label>
+            <input type="text" id="vendorSupply" name="vendorSupply">
+          </div>
+          <div class="form-group">
+            <label for="vendorPhone">Phone:</label>
+            <input type="text" id="vendorPhone" name="vendorPhone" placeholder="+91XXXXXXXXXX">
           </div>
           <div class="form-actions">
-            <button type="button" class="btn btn-cancel" onclick="closeCategoryModal()">Cancel</button>
-            <button type="submit" class="btn btn-save">Save Category</button>
+            <button type="button" class="btn btn-cancel" onclick="closeVendorModal()">Cancel</button>
+            <button type="submit" class="btn btn-save">Save Vendor</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <script src="../static/categories.js"></script>
+  <script src="../static/vendors.js"></script>
 </body>
 </html>

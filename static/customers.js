@@ -103,10 +103,7 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
   e.preventDefault();
 
   const name = document.getElementById("customerName").value;
-  const phoneLocal = document.getElementById('customerNumber').value;
-  const countryCode = document.getElementById('countryCodeSelect').value;
-  const fullPhone = `${countryCode}${phoneLocal}`;
-  const customerNumber = fullPhone;
+  const customerNumber = document.getElementById('customerNumber').value;
   const email = document.getElementById("customerEmail").value;
   const customerData = { customer_number: customerNumber, name, email };
 
@@ -117,10 +114,10 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
       return;
     }
     
-    // Phone number validation for India (example: 10 digits, with +91)
-    const phoneRegex = /^\+91\d{10}$/; // adjust regex for your supported countries
-    if (!phoneRegex.test(fullPhone)) {
-      alert("Please enter a valid phone number (e.g., +911234567890).");
+    // Phone number validation for 10 digit numbers
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(customerNumber)) {
+      alert("Please enter a valid 10 digit phone number.");
       return;
     }
     
