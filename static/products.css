@@ -126,14 +126,16 @@ body {
 
 .modal-content {
   background-color: #fff;
-  margin: 15% auto;
   padding: 20px;
   width: 80%;
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;
   border-radius: 8px;
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .product-history-container {
@@ -269,22 +271,6 @@ body {
 
 .main-content.expanded {
   margin-left: 200px;
-}
-
-/* Grid Layout for box-back divs */
-.overv > div {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  padding: 20px;
-}
-
-/* Box Style */
-.box-back {
-  height: 110px;
-  background-color: grey;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* ------------------------- */
