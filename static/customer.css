@@ -253,46 +253,6 @@ body {
     margin-left: 200px;
 }
 
-/* Grid Layout for box-back divs */
-.overv > div {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* Always 2 columns per row */
-    gap: 20px; /* Space between boxes */
-    padding: 20px; /* Optional: Add padding around the grid */
-}
-
-/* Styling for each box-back div */
-.box-back {
-    height: 110px; /* Fixed height */
-    background-color: grey; /* Grey background */
-    border-radius: 8px; /* Optional: Rounded corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
-}
-
-/* ------------------------- */
-/*        Phone Input        */
-/* ------------------------- */
-
-.phone-input-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.phone-input-group select {
-  width: 30%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.phone-input-group input {
-  width: 70%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
 
 /* ------------------------- */
 /*          Header           */

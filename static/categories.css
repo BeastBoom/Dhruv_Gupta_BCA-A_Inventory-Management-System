@@ -338,24 +338,6 @@ body.dark-theme .modal {
 }
 
 /* ------------------------- */
-/*       Grid Layout         */
-/* ------------------------- */
-.overv > div {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr); /* Adjust if needed */
-  gap: 20px;
-  padding: 20px;
-}
-
-/* Box style */
-.box-back {
-  height: 110px;
-  background-color: grey;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* ------------------------- */
 /*          Header           */
 /* ------------------------- */
 header {
