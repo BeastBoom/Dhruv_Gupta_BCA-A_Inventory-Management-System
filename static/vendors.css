@@ -1,0 +1,343 @@
+/* General Styles */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  transition: color 0.3s;
+}
+
+/* Vendor Management Styles */
+.vendors-management {
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.vendors-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.vendors-table th,
+.vendors-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.vendors-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.vendors-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+  margin: 0 2px;
+}
+
+.btn-add {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-add:hover {
+  background-color: #45a049;
+}
+
+.btn-edit {
+  background-color: #2196F3;
+  color: white;
+}
+
+.btn-edit:hover {
+  background-color: #1e88e5;
+}
+
+.btn-delete {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #e53935;
+}
+
+.btn-cancel {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background-color: #e53935;
+}
+
+.btn-save {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-save:hover {
+  background-color: #45a049;
+}
+
+/* ---------- Modals ---------- */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  margin: 15% auto;
+  padding: 20px;
+  width: 80%;
+  max-width: 500px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  right: 20px;
+  top: 10px;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #f44336;
+}
+
+/* ---------- Form Styles ---------- */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Disable resizing for textareas */
+.form-group textarea {
+  resize: none;
+}
+
+.form-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Sidebar Styles */
+#logo-image {
+  height: 65px;
+  display: block;
+  margin: 10px auto;
+}
+
+.sidebar {
+  width: 63px;
+  height: 100vh;
+  background-color: #333;
+  color: white;
+  position: fixed;
+  transition: width 0.3s;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar.expanded {
+  width: 200px;
+}
+
+.sidebar-logo {
+  padding: 10px 0;
+  text-align: center;
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.sidebar ul li {
+  padding: 15px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sidebar ul li a {
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar ul li a span {
+  margin-right: 10px;
+}
+
+
+/* Hide menu text by default */
+.sidebar ul li a .menu-text {
+  display: none;
+  margin-left: 10px;
+}
+
+/* Show menu text when sidebar is expanded */
+.sidebar.expanded ul li a .menu-text {
+  display: inline;
+}
+.menu-toggle {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 15px;
+  text-align: left;
+  width: 100%;
+}
+
+/* Main Content Styles */
+.main-content {
+  margin-left: 60px;
+  padding: 20px;
+  transition: margin-left 0.3s;
+}
+
+.main-content.expanded {
+  margin-left: 200px;
+}
+
+
+/* ------------------------- */
+/*          Header           */
+/* ------------------------- */
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+#theme-toggle {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* ------------------------- */
+/*      Dark Theme           */
+/* ------------------------- */
+body.dark-theme {
+  background-color: #111010;
+  color: #ffffff;
+}
+
+body.dark-theme .sidebar {
+  background-color: #0d0707;
+}
+
+body.dark-theme .main-content {
+  background-color: #111010;
+}
+
+
+body.dark-theme .vendors-management {
+  background-color: #2c2c2c;
+  color: #fff;
+}
+
+body.dark-theme .modal-content {
+  background-color: #2c2c2c;
+  color: #ffffff;
+}
+
+body.dark-theme .vendors-table th {
+  background-color: #333;
+}
+
+body.dark-theme .vendors-table tr:hover {
+  background-color: #3a3a3a;
+}
+
+body.dark-theme .form-group input,
+body.dark-theme .form-group textarea {
+  background-color: #444;
+  border-color: #555;
+  color: #fff;
+}
+
+body.dark-theme .form-group label {
+  color: #ffffff;
+}
+
+body.dark-theme .btn-add {
+  background-color: #388e3c;
+}
+
+body.dark-theme .btn-edit {
+  background-color: #1976d2;
+}
+
+body.dark-theme .btn-delete {
+  background-color: #d32f2f;
+}
+
+body.dark-theme .btn-cancel {
+  background-color: #d32f2f;
+}
+
+body.dark-theme .btn-save {
+  background-color: #388e3c;
+}
+
+body.dark-theme .modal {
+  background-color: rgba(0, 0, 0, 0.7);
+}
