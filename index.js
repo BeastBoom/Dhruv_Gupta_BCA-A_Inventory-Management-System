@@ -230,20 +230,29 @@ app.post('/api/signup', async (req, res) => {
       [user.id, code, expiresAt],
     );
 
-    // 7) TODO: sendEmail(email, code)
-    await sendEmail(email, code);
-    console.log(`Verification code sent to ${email}`);
+    // … after INSERT INTO email_verifications …
+    await pool.query(
+      `INSERT INTO email_verifications (user_id, code, expires_at)
+           VALUES ($1, $2, $3)`,
+      [user.id, code, expiresAt],
+    );
 
-    // 8) Respond to client
+    // now send the email—if this throws, it will surface in our catch above
+    await sendEmail(email, code);
+
+    // finally, let the front-end know we’re good:
     res.json({
       success: true,
       user,
-      message:
-        'Account created. Verification code has been sent to your email.',
+      message: 'Account created. Verification code sent.',
     });
   } catch (err) {
-    console.error('Error during signup:', err);
-    res.status(500).json({ success: false, message: 'Signup failed.' });
+    console.error('🚨 Error during /api/signup:', err.stack);
+    // send the real message back so our frontend page‑alerts can show it
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Unknown signup error',
+    });
   }
 });
 
