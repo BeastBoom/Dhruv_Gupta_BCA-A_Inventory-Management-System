@@ -181,78 +181,62 @@ async function logProductHistory(
 -------------------- */
 
 // Signup Endpoint
-// Revised Signup Endpoint with email‐verification integration
 app.post('/api/signup', async (req, res) => {
   const { username, email, password } = req.body;
-  // 1) Basic presence checks
   if (!username || !email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: 'Username, email, and password are required.',
-    });
+    return res.status(400).json({ success:false, message:'Username, email & password are required.' });
   }
 
-  // 2) Email format validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res
-      .status(400)
-      .json({ success: false, message: 'Invalid email format.' });
+  // 1) email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success:false, message:'Invalid email format.' });
   }
-
-  // 3) Password strength validation
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
-  if (!passwordRegex.test(password)) {
+  // 2) password strength
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password)) {
     return res.status(400).json({
-      success: false,
-      message:
-        'Password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character.',
+      success:false,
+      message:'Password must be 8+ chars with uppercase, lowercase, number & special.'
     });
   }
 
   try {
-    // 4) Hash and create the user
-    const hash = await bcrypt.hash(password, 10);   const verRes = await pool.query(
-        `INSERT INTO email_verifications (username, email, password_hash, code, expires_at) VALUES ($1,$2,$3,$4,$5) RETURNING id`,[username, email, hash, code, expiresAt],
-      );
-    const verificationId = verRes.rows[0].id;
+    // A) hash & create the user record
+    const password_hash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      `INSERT INTO users (username,email,password) 
+       VALUES ($1,$2,$3) RETURNING id`,
+      [username, email, password_hash]
+    );
+    const userId = rows[0].id;
 
-    // 5) Generate a 6‑digit verification code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // +1 hour
+    // B) generate the code **after** the user exists
+    const code = Math.floor(100000 + Math.random()*900000).toString();
+    const expires_at = new Date(Date.now() + 60*60*1000);
 
-    // 6) Store it in email_verifications
+    // C) store the pending signup in email_verifications
     await pool.query(
-      `INSERT INTO email_verifications (user_id, code, expires_at)
-       VALUES ($1, $2, $3)`,
-      [user.id, code, expiresAt],
+      `INSERT INTO email_verifications 
+         (username,email,password_hash,code,expires_at) 
+       VALUES ($1,$2,$3,$4,$5)`,
+      [username, email, password_hash, code, expires_at]
     );
 
-    // … after INSERT INTO email_verifications …
-    await pool.query(
-      `INSERT INTO email_verifications (user_id, code, expires_at)
-           VALUES ($1, $2, $3)`,
-      [user.id, code, expiresAt],
-    );
-
-    // now send the email—if this throws, it will surface in our catch above
+    // D) send the email (your mailer won’t see a TDZ)
     await sendEmail(email, code);
 
-    // finally, let the front-end know we’re good:
+    // E) tell the front‑end to pop up the verify modal
     res.json({
       success: true,
-      verificationId,
-      message: 'Signup pending. Check your inbox for the code.',
+      message: 'Account created. Verification code sent.',
+      userId
     });
+
   } catch (err) {
-    console.error('🚨 Error during /api/signup:', err.stack);
-    // send the real message back so our frontend page‑alerts can show it
-    return res.status(500).json({
-      success: false,
-      message: err.message || 'Unknown signup error',
-    });
+    console.error('❌ Error during /api/signup:', err);
+    res.status(500).json({ success:false, message: err.message || 'Signup failed.' });
   }
 });
+
 
 // Resend verification code (max 3 / 30min)
 app.post('/api/resend-code', requireUser, async (req, res) => {
