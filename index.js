@@ -1,6 +1,6 @@
 'use strict';
 const nodemailer = require('nodemailer');
-const sendEmail = require('./mailer'); 
+const sendEmail = require('./mailer');
 
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
@@ -12,16 +12,14 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PG_PORT || 5432;
 
-const nodemailer = require('nodemailer');
-
 // Send verification email with 6-digit code
 async function sendEmail(to, code) {
   const transporter = nodemailer.createTransport({
     service: process.env.EMAIL_SERVICE,
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
+      pass: process.env.EMAIL_PASS,
+    },
   });
 
   const mailOptions = {
@@ -34,7 +32,7 @@ async function sendEmail(to, code) {
       <p>Thank you for signing up. Please use the code below to verify your email:</p>
       <h3 style="color:#007BFF;">${code}</h3>
       <p>This code will expire in 1 hour.</p>
-    `
+    `,
   };
 
   try {
@@ -45,7 +43,6 @@ async function sendEmail(to, code) {
     throw new Error('Email could not be sent.');
   }
 }
-
 
 // Enable CORS and JSON parsing
 app.use(cors());
@@ -251,7 +248,7 @@ app.post('/api/signup', async (req, res) => {
       `INSERT INTO users (username, email, password)
        VALUES ($1, $2, $3)
        RETURNING id, username, email`,
-      [username, email, hash]
+      [username, email, hash],
     );
     const user = userRes.rows[0];
 
@@ -263,7 +260,7 @@ app.post('/api/signup', async (req, res) => {
     await pool.query(
       `INSERT INTO email_verifications (user_id, code, expires_at)
        VALUES ($1, $2, $3)`,
-      [user.id, code, expiresAt]
+      [user.id, code, expiresAt],
     );
 
     // 7) TODO: sendEmail(email, code)
@@ -274,9 +271,9 @@ app.post('/api/signup', async (req, res) => {
     res.json({
       success: true,
       user,
-      message: 'Account created. Verification code has been sent to your email.'
+      message:
+        'Account created. Verification code has been sent to your email.',
     });
-
   } catch (err) {
     console.error('Error during signup:', err);
     res.status(500).json({ success: false, message: 'Signup failed.' });
@@ -284,46 +281,57 @@ app.post('/api/signup', async (req, res) => {
 });
 
 // Resend verification code (max 3 / 30min)
-app.post('/api/resend-code', requireUser, async (req,res) => {
+app.post('/api/resend-code', requireUser, async (req, res) => {
   const userId = req.userId;
   const row = await pool.query(
     `SELECT attempts, last_requested FROM email_verifications
-     WHERE user_id=$1`,[userId]
+     WHERE user_id=$1`,
+    [userId],
   );
-  if(!row.rowCount) return res.status(400).json({success:false,message:'No pending verification.'});
+  if (!row.rowCount)
+    return res
+      .status(400)
+      .json({ success: false, message: 'No pending verification.' });
 
   let { attempts, last_requested } = row.rows[0];
-  if(Date.now() - new Date(last_requested) > 30*60*1000) attempts=0;
-  if(attempts>=3) return res.status(429).json({success:false,message:'Resend limit reached.'});
+  if (Date.now() - new Date(last_requested) > 30 * 60 * 1000) attempts = 0;
+  if (attempts >= 3)
+    return res
+      .status(429)
+      .json({ success: false, message: 'Resend limit reached.' });
 
-  const code = Math.floor(100000+Math.random()*900000).toString();
-  const expires = new Date(Date.now()+60*60*1000);
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 60 * 60 * 1000);
   await pool.query(
     `UPDATE email_verifications
      SET code=$1,expires_at=$2, attempts=attempts+1, last_requested=NOW()
      WHERE user_id=$3`,
-    [code,expires,userId]
+    [code, expires, userId],
   );
   // sendEmail(...)
-  res.json({ success:true, attempts:attempts+1 });
+  res.json({ success: true, attempts: attempts + 1 });
 });
 
 // Verify code
-app.post('/api/verify-code', requireUser, async (req,res) => {
-  const { code } = req.body, userId = req.userId;
+app.post('/api/verify-code', requireUser, async (req, res) => {
+  const { code } = req.body,
+    userId = req.userId;
   const row = await pool.query(
     `SELECT expires_at FROM email_verifications
      WHERE user_id=$1 AND code=$2`,
-    [userId,code]
+    [userId, code],
   );
-  if(!row.rowCount || new Date(row.rows[0].expires_at) < new Date())
-    return res.status(400).json({success:false,message:'Invalid or expired code.'});
+  if (!row.rowCount || new Date(row.rows[0].expires_at) < new Date())
+    return res
+      .status(400)
+      .json({ success: false, message: 'Invalid or expired code.' });
 
-  await pool.query(`UPDATE users SET verified=true WHERE id=$1`,[userId]);
-  await pool.query(`DELETE FROM email_verifications WHERE user_id=$1`,[userId]);
-  res.json({ success:true });
+  await pool.query(`UPDATE users SET verified=true WHERE id=$1`, [userId]);
+  await pool.query(`DELETE FROM email_verifications WHERE user_id=$1`, [
+    userId,
+  ]);
+  res.json({ success: true });
 });
-
 
 // Login Endpoint
 app.post('/api/login', async (req, res) => {
