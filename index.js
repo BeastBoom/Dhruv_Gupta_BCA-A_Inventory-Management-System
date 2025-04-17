@@ -289,7 +289,7 @@ app.post('/api/resend-code', requireUser, async (req, res) => {
 });
 
 // Verify code
-app.post('/api/verify-code', requireUser, async (req, res) => {
+app.get('/api/verify-code', requireUser, async (req, res) => {
   const { code } = req.body,
     userId = req.userId;
   const row = await pool.query(
