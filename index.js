@@ -183,15 +183,14 @@ async function logProductHistory(
 // Signup Endpoint
 app.post('/api/signup', async (req, res) => {
   const { username, email, password } = req.body;
+  // 1) presence check
   if (!username || !email || !password) {
     return res.status(400).json({ success:false, message:'Username, email & password are required.' });
   }
-
-  // 1) email format
+  // 2) format checks
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ success:false, message:'Invalid email format.' });
   }
-  // 2) password strength
   if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password)) {
     return res.status(400).json({
       success:false,
@@ -200,42 +199,38 @@ app.post('/api/signup', async (req, res) => {
   }
 
   try {
-    // A) hash & create the user record
+    // A) hash password
     const password_hash = await bcrypt.hash(password, 10);
-    const { rows } = await pool.query(
-      `INSERT INTO users (username,email,password) 
-       VALUES ($1,$2,$3) RETURNING id`,
-      [username, email, password_hash]
-    );
-    const userId = rows[0].id;
-
-    // B) generate the code **after** the user exists
+    // B) generate code
     const code = Math.floor(100000 + Math.random()*900000).toString();
     const expires_at = new Date(Date.now() + 60*60*1000);
 
-    // C) store the pending signup in email_verifications
-    await pool.query(
-      `INSERT INTO email_verifications 
-         (username,email,password_hash,code,expires_at) 
-       VALUES ($1,$2,$3,$4,$5)`,
+    // C) store pending signup
+    const ev = await pool.query(
+      `INSERT INTO email_verifications
+         (username, email, password_hash, code, expires_at)
+       VALUES ($1,$2,$3,$4,$5)
+       RETURNING id`,
       [username, email, password_hash, code, expires_at]
     );
+    const pendingId = ev.rows[0].id;
 
-    // D) send the email (your mailer won’t see a TDZ)
+    // D) send code
     await sendEmail(email, code);
 
-    // E) tell the front‑end to pop up the verify modal
+    // E) respond with the pending‐ID
     res.json({
       success: true,
-      message: 'Account created. Verification code sent.',
-      userId
+      message: 'Verification code sent.',
+      pendingId
     });
 
   } catch (err) {
-    console.error('❌ Error during /api/signup:', err);
-    res.status(500).json({ success:false, message: err.message || 'Signup failed.' });
+    console.error('❌ /api/signup error:', err);
+    res.status(500).json({ success:false, message: err.message });
   }
 });
+
 
 
 // Resend verification code (max 3 / 30min)
@@ -272,47 +267,40 @@ app.post('/api/resend-code', requireUser, async (req, res) => {
 
 // Verify code
 app.post('/api/verify-code', async (req, res) => {
-  const { verificationId, code } = req.body;
-  if (!verificationId || !code) {
-    return res.status(400).json({ success: false, message: 'Missing fields.' });
-  }
-
+  const { pendingId, code } = req.body;
   try {
+    // A) fetch the pending row
     const { rows } = await pool.query(
-      `SELECT username, email, password_hash, expires_at, attempts, last_requested
+      `SELECT username,email,password_hash,expires_at
          FROM email_verifications
-        WHERE id=$1`,
-      [verificationId]
+        WHERE id=$1 AND code=$2`,
+      [pendingId, code]
     );
-    if (!rows.length) {
-      return res.status(400).json({ success: false, message: 'No pending signup.' });
+    if (!rows.length || new Date(rows[0].expires_at) < new Date()) {
+      return res.status(400).json({ success:false, message:'Invalid or expired code.' });
     }
-    const rec = rows[0];
-    if (new Date(rec.expires_at) < new Date()) {
-      return res.status(400).json({ success: false, message: 'Code expired.' });
-    }
-    if (rec.code !== code) {
-      return res.status(400).json({ success: false, message: 'Incorrect code.' });
-    }
+    const { username, email, password_hash } = rows[0];
 
-    // create the real user
-    const ins = await pool.query(
-      `INSERT INTO users (username, email, password)
-         VALUES ($1,$2,$3)
-       RETURNING id, username, email`,
-      [rec.username, rec.email, rec.password_hash]
+    // B) create the real user
+    await pool.query(
+      `INSERT INTO users (username,email,password)
+         VALUES ($1,$2,$3)`,
+      [username, email, password_hash]
     );
-    const user = ins.rows[0];
 
-    // clean up
-    await pool.query(`DELETE FROM email_verifications WHERE id=$1`, [verificationId]);
+    // C) remove the pending row
+    await pool.query(
+      `DELETE FROM email_verifications WHERE id=$1`,
+      [pendingId]
+    );
 
-    res.json({ success: true, user });
+    res.json({ success:true, message:'Email verified and account created.' });
   } catch (err) {
-    console.error('Error in verify-code:', err);
-    res.status(500).json({ success: false, message: 'Server error.' });
+    console.error('❌ /api/verify-code error:', err);
+    res.status(500).json({ success:false, message:err.message });
   }
 });
+
 
 // Login Endpoint
 app.post('/api/login', async (req, res) => {
