@@ -1,5 +1,4 @@
 'use strict';
-const nodemailer = require('nodemailer');
 const sendEmail = require('./mailer');
 
 const { Pool } = require('pg');
@@ -122,16 +121,16 @@ async function initializeDatabase() {
 
     // Create product_history table
     await pool.query(`
-  CREATE TABLE IF NOT EXISTS product_history (
-    id SERIAL PRIMARY KEY,
-    product_id INT NOT NULL,
-    product_name VARCHAR(255),
-    change_type VARCHAR(50) NOT NULL,
-    change_details TEXT,
-    changed_at TIMESTAMPZ DEFAULT NOW(),
-    user_id INT NOT NULL,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-  )
+    CREATE TABLE IF NOT EXISTS product_history (
+      id SERIAL PRIMARY KEY,
+      product_id INT NOT NULL,
+      product_name VARCHAR(255),
+      change_type VARCHAR(50) NOT NULL,
+      change_details TEXT,
+      changed_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata'),
+      user_id INT NOT NULL,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    )
 `);
     console.log('Product_history table is ready');
     // Create email_verifications table
