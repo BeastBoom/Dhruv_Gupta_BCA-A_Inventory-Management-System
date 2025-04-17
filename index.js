@@ -1,4 +1,6 @@
 'use strict';
+const nodemailer = require('nodemailer');
+const sendEmail = require('./mailer'); 
 
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
@@ -9,6 +11,41 @@ const bcrypt = require('bcrypt');
 const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PG_PORT || 5432;
+
+const nodemailer = require('nodemailer');
+
+// Send verification email with 6-digit code
+async function sendEmail(to, code) {
+  const transporter = nodemailer.createTransport({
+    service: process.env.EMAIL_SERVICE,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+  const mailOptions = {
+    from: `"Inventory System" <${process.env.EMAIL_USER}>`,
+    to,
+    subject: 'Verify your email',
+    text: `Your email verification code is: ${code}`,
+    html: `
+      <h2>Email Verification</h2>
+      <p>Thank you for signing up. Please use the code below to verify your email:</p>
+      <h3 style="color:#007BFF;">${code}</h3>
+      <p>This code will expire in 1 hour.</p>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Verification email sent to ${to}`);
+  } catch (error) {
+    console.error('Email sending failed:', error);
+    throw new Error('Email could not be sent.');
+  }
+}
+
 
 // Enable CORS and JSON parsing
 app.use(cors());
@@ -132,6 +169,18 @@ async function initializeDatabase() {
   )
 `);
     console.log('Product_history table is ready');
+    // Create email_verifications table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_verifications (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        code CHAR(6) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        attempts INT NOT NULL DEFAULT 1,
+        last_requested TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log('Email_verifications table is ready');
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -166,8 +215,10 @@ async function logProductHistory(
 -------------------- */
 
 // Signup Endpoint
+// Revised Signup Endpoint with email‐verification integration
 app.post('/api/signup', async (req, res) => {
   const { username, email, password } = req.body;
+  // 1) Basic presence checks
   if (!username || !email || !password) {
     return res.status(400).json({
       success: false,
@@ -175,7 +226,7 @@ app.post('/api/signup', async (req, res) => {
     });
   }
 
-  // Basic server-side email validation
+  // 2) Email format validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res
@@ -183,7 +234,7 @@ app.post('/api/signup', async (req, res) => {
       .json({ success: false, message: 'Invalid email format.' });
   }
 
-  // Password validation: Minimum 8 characters, with uppercase, lowercase, digit, special character
+  // 3) Password strength validation
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
   if (!passwordRegex.test(password)) {
     return res.status(400).json({
@@ -194,17 +245,85 @@ app.post('/api/signup', async (req, res) => {
   }
 
   try {
+    // 4) Hash and create the user
     const hash = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
-      [username, email, hash],
+    const userRes = await pool.query(
+      `INSERT INTO users (username, email, password)
+       VALUES ($1, $2, $3)
+       RETURNING id, username, email`,
+      [username, email, hash]
     );
-    res.json({ success: true, user: result.rows[0] });
+    const user = userRes.rows[0];
+
+    // 5) Generate a 6‑digit verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // +1 hour
+
+    // 6) Store it in email_verifications
+    await pool.query(
+      `INSERT INTO email_verifications (user_id, code, expires_at)
+       VALUES ($1, $2, $3)`,
+      [user.id, code, expiresAt]
+    );
+
+    // 7) TODO: sendEmail(email, code)
+    await sendEmail(email, code);
+    console.log(`Verification code sent to ${email}`);
+
+    // 8) Respond to client
+    res.json({
+      success: true,
+      user,
+      message: 'Account created. Verification code has been sent to your email.'
+    });
+
   } catch (err) {
     console.error('Error during signup:', err);
     res.status(500).json({ success: false, message: 'Signup failed.' });
   }
 });
+
+// Resend verification code (max 3 / 30min)
+app.post('/api/resend-code', requireUser, async (req,res) => {
+  const userId = req.userId;
+  const row = await pool.query(
+    `SELECT attempts, last_requested FROM email_verifications
+     WHERE user_id=$1`,[userId]
+  );
+  if(!row.rowCount) return res.status(400).json({success:false,message:'No pending verification.'});
+
+  let { attempts, last_requested } = row.rows[0];
+  if(Date.now() - new Date(last_requested) > 30*60*1000) attempts=0;
+  if(attempts>=3) return res.status(429).json({success:false,message:'Resend limit reached.'});
+
+  const code = Math.floor(100000+Math.random()*900000).toString();
+  const expires = new Date(Date.now()+60*60*1000);
+  await pool.query(
+    `UPDATE email_verifications
+     SET code=$1,expires_at=$2, attempts=attempts+1, last_requested=NOW()
+     WHERE user_id=$3`,
+    [code,expires,userId]
+  );
+  // sendEmail(...)
+  res.json({ success:true, attempts:attempts+1 });
+});
+
+// Verify code
+app.post('/api/verify-code', requireUser, async (req,res) => {
+  const { code } = req.body, userId = req.userId;
+  const row = await pool.query(
+    `SELECT expires_at FROM email_verifications
+     WHERE user_id=$1 AND code=$2`,
+    [userId,code]
+  );
+  if(!row.rowCount || new Date(row.rows[0].expires_at) < new Date())
+    return res.status(400).json({success:false,message:'Invalid or expired code.'});
+
+  await pool.query(`UPDATE users SET verified=true WHERE id=$1`,[userId]);
+  await pool.query(`DELETE FROM email_verifications WHERE user_id=$1`,[userId]);
+  res.json({ success:true });
+});
+
 
 // Login Endpoint
 app.post('/api/login', async (req, res) => {
@@ -542,7 +661,7 @@ app.get('/api/vendors', requireUser, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT * FROM vendors WHERE user_id = $1 ORDER BY id ASC`,
-      [userId]
+      [userId],
     );
     res.json(result.rows);
   } catch (err) {
@@ -555,14 +674,16 @@ app.post('/api/vendors', requireUser, async (req, res) => {
   const userId = req.userId;
   const { name, email, supply_area, phone } = req.body;
   if (!name) {
-    return res.status(400).json({ success: false, message: 'Vendor name is required' });
+    return res
+      .status(400)
+      .json({ success: false, message: 'Vendor name is required' });
   }
   try {
     const result = await pool.query(
       `INSERT INTO vendors (name, email, supply_area, phone, user_id)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [name, email || null, supply_area || null, phone || null, userId]
+      [name, email || null, supply_area || null, phone || null, userId],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -576,13 +697,15 @@ app.put('/api/vendors/:id', requireUser, async (req, res) => {
   const { id } = req.params;
   const { name, email, supply_area, phone } = req.body;
   if (!name) {
-    return res.status(400).json({ success: false, message: 'Vendor name is required' });
+    return res
+      .status(400)
+      .json({ success: false, message: 'Vendor name is required' });
   }
   try {
     const result = await pool.query(
       `UPDATE vendors SET name = $1, email = $2, supply_area = $3, phone = $4
        WHERE id = $5 AND user_id = $6 RETURNING *`,
-      [name, email || null, supply_area || null, phone || null, id, userId]
+      [name, email || null, supply_area || null, phone || null, id, userId],
     );
     if (result.rowCount === 0) return res.status(404).send('Vendor not found');
     res.json(result.rows[0]);
@@ -598,7 +721,7 @@ app.delete('/api/vendors/:id', requireUser, async (req, res) => {
   try {
     const result = await pool.query(
       `DELETE FROM vendors WHERE id = $1 AND user_id = $2`,
-      [id, userId]
+      [id, userId],
     );
     if (result.rowCount === 0) return res.status(404).send('Vendor not found');
     res.json({ message: 'Vendor deleted successfully' });
@@ -607,7 +730,6 @@ app.delete('/api/vendors/:id', requireUser, async (req, res) => {
     res.status(500).send('Error deleting vendor');
   }
 });
-
 
 /* ---------- ORDERS API ---------- */
 app.get('/api/orders', requireUser, async (req, res) => {
@@ -1029,30 +1151,39 @@ app.post('/api/validate-email', async (req, res) => {
   }
 });
 
-app.post("/api/validate-phone", async (req, res) => {
-  const { phone } = req.body;
-  if (!phone || phone.length !== 10 || isNaN(phone)) {
-    return res.status(400).json({ success: false, message: "Invalid phone format. Must be 10 digits." });
+app.post('/api/verify-email', async (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'Email and code are required.' });
   }
-  const apiKey = process.env.PHONE_VALIDATION_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ success: false, message: "Server misconfiguration: API key missing." });
+  // look up user
+  const u = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
+  if (!u.rowCount)
+    return res.status(404).json({ success: false, message: 'Unknown email.' });
+  const userId = u.rows[0].id;
+
+  // check code
+  const v = await pool.query(
+    'SELECT id FROM email_verifications WHERE user_id=$1 AND code=$2 AND expires_at > NOW()',
+    [userId, code],
+  );
+  if (!v.rowCount) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'Invalid or expired code.' });
   }
-  // Assuming you are validating for Indian phone numbers; you may change country_code if needed
-  const url = `http://apilayer.net/api/validate?access_key=${apiKey}&number=${encodeURIComponent(phone)}&country_code=IN&format=1`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Phone validation request failed: ${response.status}`);
-    const data = await response.json();
-    if (data.valid) {
-      res.json({ success: true, valid: true, country: data.country_name });
-    } else {
-      res.json({ success: false, valid: false, message: "Invalid phone number." });
-    }
-  } catch (error) {
-    console.error("Error validating phone:", error);
-    res.status(500).json({ success: false, message: "Phone validation service error." });
-  }
+
+  // mark email verified and clean up
+  await pool.query('UPDATE users SET email_verified=TRUE WHERE id=$1', [
+    userId,
+  ]);
+  await pool.query('DELETE FROM email_verifications WHERE user_id=$1', [
+    userId,
+  ]);
+
+  res.json({ success: true, message: 'Email verified.' });
 });
 
 app.listen(PORT, () => {

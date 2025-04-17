@@ -268,3 +268,28 @@ footer a {
   color: #3c97bf;
   text-decoration: none;
 }
+
+.modal.center { 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+}
+#verifyModal { 
+  display:none; 
+  position:fixed; 
+  inset:0; 
+  background:rgba(0,0,0,0.5); 
+  z-index:2000; 
+}
+#verifyModal .modal-content {
+  background:#fff; 
+  padding:20px; 
+  border-radius:8px; 
+  width:300px; 
+  text-align:center; 
+}
+#verifyModal input { 
+  width:100%; 
+  margin:10px 0; 
+}
+#error { color:red; }

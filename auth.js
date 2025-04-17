@@ -1,5 +1,9 @@
 "use strict";
 
+let _verificationAttempts = 0;
+const _MAX_RESENDS = 3;
+let _resendTimer = null;
+
 // Toggle between login and signup views
 const signUpButton = document.getElementById('signUp');
 const signInButton = document.getElementById('signIn');
@@ -129,8 +133,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const data = await response.json();
         if (data.success) {
-          alert("Signup successful! Please log in.");
-          window.location.href = "index.html";
+          sessionStorage.setItem("pendingUserId", data.user.id);
+          openVerificationModal();
+          return;
         } else {
           alert("Signup failed: " + data.message);
         }
@@ -234,4 +239,63 @@ if (signupConfirmInput && signupConfirmToggle) {
       signupConfirmToggle.innerHTML = '<i class="fa fa-eye"></i>';
     }
   });
+}
+
+function openVerificationModal() {
+  document.getElementById("verificationModal").style.display = "block";
+}
+
+async function handleVerifySubmit(e) {
+  e.preventDefault();
+  const code = document.getElementById("verificationCodeInput").value.trim();
+  const userId = sessionStorage.getItem("pendingUserId");
+  const res = await fetch("/api/verify-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, code })
+  });
+  const result = await res.json();
+  if (result.success) {
+    alert("✅ Email verified! You may now log in.");
+    window.location.href = "login.html";
+  } else {
+    alert("❌ " + result.message);
+  }
+}
+document.getElementById("verificationForm").addEventListener("submit", handleVerifySubmit);
+
+//resend code with limit & cooldown 
+async function handleResendCode() {
+  if (_verificationAttempts >= _MAX_RESENDS) {
+    alert("You've reached the maximum resends. Please wait 30 minutes.");
+    return;
+  }
+  _verificationAttempts++;
+  startResendCooldown();
+
+  const userId = sessionStorage.getItem("pendingUserId");
+  await fetch("/api/resend-verification", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId })
+  });
+  alert("A new code has been sent to your email.");
+}
+const _resendBtn = document.getElementById("resendCodeBtn");
+_resendBtn.addEventListener("click", handleResendCode);
+
+function startResendCooldown() {
+  let secs = 30 * 60;
+  _resendBtn.disabled = true;
+  _resendBtn.textContent = `Resend in ${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+  _resendTimer = setInterval(() => {
+    secs--;
+    _resendBtn.textContent = `Resend in ${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+    if (secs <= 0) {
+      clearInterval(_resendTimer);
+      _resendBtn.disabled = false;
+      _resendBtn.textContent = "Resend Code";
+      _verificationAttempts = 0;
+    }
+  }, 1000);
 }

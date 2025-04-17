@@ -140,88 +140,78 @@ async function deleteVendor(vendorId) {
 
 document.getElementById("vendorForm").addEventListener("submit", async function(e) {
   e.preventDefault();
-
+  
   const name = document.getElementById("vendorName").value.trim();
   const email = document.getElementById("vendorEmail").value.trim();
   const supply_area = document.getElementById("vendorSupply").value.trim();
   const phone = document.getElementById("vendorPhone").value.trim();
 
   if (!name) {
-      alert("Vendor name is required.");
-      return;
+    alert("Vendor name is required.");
+    return;
   }
-
-  // Validate email using API
+  
+  // Validate email if provided using the API endpoint
   if (email) {
-      try {
-          const validationResponse = await fetch("https://inventory-management-system-xtb4.onrender.com/api/validate-email", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email }),
-          });
-          const validationData = await validationResponse.json();
-          if (!validationData.success || !validationData.valid) {
-              alert("Invalid email address.");
-              return;
-          }
-      } catch (err) {
-          console.error("Error validating email:", err);
-          alert("Email validation failed.");
-          return;
-      }
-  }
-
-  // Validate phone using API
-  try {
-      const phoneValidationResponse = await fetch("https://inventory-management-system-xtb4.onrender.com/api/validate-phone", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone }),
+    try {
+      const validationResponse = await fetch("https://inventory-management-system-xtb4.onrender.com/api/validate-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
-      const phoneValidationData = await phoneValidationResponse.json();
-      if (!phoneValidationData.success || !phoneValidationData.valid) {
-          alert("Invalid phone number.");
-          return;
+      const validationData = await validationResponse.json();
+      if (!validationData.success || !validationData.valid) {
+        alert("The provided email address appears to be invalid.");
+        return;
       }
-  } catch (err) {
-      console.error("Error validating phone:", err);
-      alert("Phone validation failed.");
+    } catch (err) {
+      console.error("Error during email validation:", err);
+      alert("Email validation failed.");
       return;
+    }
   }
-
+  
+  // Validate phone: must be a 10-digit number (no country code)
+  const phoneRegex = /^\d{10}$/;
+  if (!phoneRegex.test(phone)) {
+    alert("Please enter a valid 10-digit phone number.");
+    return;
+  }
+  
   const vendorData = { name, email, supply_area, phone };
-
+  
   try {
-      if (editingVendor) {
-          const vendorId = editingVendor.getAttribute('data-id');
-          const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/vendors/${vendorId}`, {
-              method: 'PUT',
-              headers: {
-                  "Content-Type": "application/json",
-                  "x-user-id": sessionStorage.getItem("userId")
-              },
-              body: JSON.stringify(vendorData)
-          });
-          await response.json();
-          fetchVendors();
-          closeVendorModal();
-      } else {
-          const response = await fetch("https://inventory-management-system-xtb4.onrender.com/api/vendors", {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-                  "x-user-id": sessionStorage.getItem("userId")
-              },
-              body: JSON.stringify(vendorData)
-          });
-          await response.json();
-          fetchVendors();
-          closeVendorModal();
-      }
+    if (editingVendor) {
+      const vendorId = editingVendor.getAttribute('data-id');
+      const response = await fetch(`https://inventory-management-system-xtb4.onrender.com/api/vendors/${vendorId}`, {
+        method: 'PUT',
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": sessionStorage.getItem("userId")
+        },
+        body: JSON.stringify(vendorData)
+      });
+      await response.json();
+      fetchVendors();
+      closeVendorModal();
+    } else {
+      const response = await fetch("https://inventory-management-system-xtb4.onrender.com/api/vendors", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": sessionStorage.getItem("userId")
+        },
+        body: JSON.stringify(vendorData)
+      });
+      await response.json();
+      fetchVendors();
+      closeVendorModal();
+    }
   } catch (error) {
-      console.error("Error saving vendor:", error);
+    console.error("Error saving vendor:", error);
   }
 });
+
 
 
 // Attach functions globally for inline HTML event handlers
