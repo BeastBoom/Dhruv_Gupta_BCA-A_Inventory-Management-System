@@ -137,11 +137,13 @@ async function initializeDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS email_verifications (
         id SERIAL PRIMARY KEY,
-        user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        code CHAR(6) NOT NULL,
-        expires_at TIMESTAMP NOT NULL,
-        attempts INT NOT NULL DEFAULT 1,
-        last_requested TIMESTAMP NOT NULL DEFAULT NOW()
+        username      VARCHAR(255) NOT NULL,
+        email         VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        code          CHAR(6)      NOT NULL,
+        expires_at    TIMESTAMP    NOT NULL,
+        attempts      INT          NOT NULL DEFAULT 1,
+        last_requested TIMESTAMP   NOT NULL DEFAULT NOW()
       )
     `);
     console.log('Email_verifications table is ready');
@@ -210,14 +212,10 @@ app.post('/api/signup', async (req, res) => {
 
   try {
     // 4) Hash and create the user
-    const hash = await bcrypt.hash(password, 10);
-    const userRes = await pool.query(
-      `INSERT INTO users (username, email, password)
-       VALUES ($1, $2, $3)
-       RETURNING id, username, email`,
-      [username, email, hash],
-    );
-    const user = userRes.rows[0];
+    const hash = await bcrypt.hash(password, 10);   const verRes = await pool.query(
+        `INSERT INTO email_verifications (username, email, password_hash, code, expires_at) VALUES ($1,$2,$3,$4,$5) RETURNING id`,[username, email, hash, code, expiresAt],
+      );
+    const verificationId = verRes.rows[0].id;
 
     // 5) Generate a 6‑digit verification code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -243,8 +241,8 @@ app.post('/api/signup', async (req, res) => {
     // finally, let the front-end know we’re good:
     res.json({
       success: true,
-      user,
-      message: 'Account created. Verification code sent.',
+      verificationId,
+      message: 'Signup pending. Check your inbox for the code.',
     });
   } catch (err) {
     console.error('🚨 Error during /api/signup:', err.stack);
@@ -289,24 +287,47 @@ app.post('/api/resend-code', requireUser, async (req, res) => {
 });
 
 // Verify code
-app.get('/api/verify-code', requireUser, async (req, res) => {
-  const { code } = req.body,
-    userId = req.userId;
-  const row = await pool.query(
-    `SELECT expires_at FROM email_verifications
-     WHERE user_id=$1 AND code=$2`,
-    [userId, code],
-  );
-  if (!row.rowCount || new Date(row.rows[0].expires_at) < new Date())
-    return res
-      .status(400)
-      .json({ success: false, message: 'Invalid or expired code.' });
+app.post('/api/verify-code', async (req, res) => {
+  const { verificationId, code } = req.body;
+  if (!verificationId || !code) {
+    return res.status(400).json({ success: false, message: 'Missing fields.' });
+  }
 
-  await pool.query(`UPDATE users SET verified=true WHERE id=$1`, [userId]);
-  await pool.query(`DELETE FROM email_verifications WHERE user_id=$1`, [
-    userId,
-  ]);
-  res.json({ success: true });
+  try {
+    const { rows } = await pool.query(
+      `SELECT username, email, password_hash, expires_at, attempts, last_requested
+         FROM email_verifications
+        WHERE id=$1`,
+      [verificationId]
+    );
+    if (!rows.length) {
+      return res.status(400).json({ success: false, message: 'No pending signup.' });
+    }
+    const rec = rows[0];
+    if (new Date(rec.expires_at) < new Date()) {
+      return res.status(400).json({ success: false, message: 'Code expired.' });
+    }
+    if (rec.code !== code) {
+      return res.status(400).json({ success: false, message: 'Incorrect code.' });
+    }
+
+    // create the real user
+    const ins = await pool.query(
+      `INSERT INTO users (username, email, password)
+         VALUES ($1,$2,$3)
+       RETURNING id, username, email`,
+      [rec.username, rec.email, rec.password_hash]
+    );
+    const user = ins.rows[0];
+
+    // clean up
+    await pool.query(`DELETE FROM email_verifications WHERE id=$1`, [verificationId]);
+
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Error in verify-code:', err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
 });
 
 // Login Endpoint
