@@ -269,6 +269,10 @@ footer a {
   text-decoration: none;
 }
 
+.modal{
+  display: none;
+}
+
 .modal.center { 
   display:flex; 
   align-items:center; 
