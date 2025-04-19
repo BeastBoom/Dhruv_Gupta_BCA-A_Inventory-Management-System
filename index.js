@@ -234,35 +234,60 @@ app.post('/api/signup', async (req, res) => {
 
 
 // Resend verification code (max 3 / 30min)
-app.post('/api/resend-code', requireUser, async (req, res) => {
-  const userId = req.userId;
-  const row = await pool.query(
-    `SELECT attempts, last_requested FROM email_verifications
-     WHERE user_id=$1`,
-    [userId],
-  );
-  if (!row.rowCount)
-    return res
-      .status(400)
-      .json({ success: false, message: 'No pending verification.' });
+app.post('/api/resend-code', async (req, res) => {
+  const { verificationId } = req.body;
 
-  let { attempts, last_requested } = row.rows[0];
-  if (Date.now() - new Date(last_requested) > 30 * 60 * 1000) attempts = 0;
-  if (attempts >= 3)
-    return res
-      .status(429)
-      .json({ success: false, message: 'Resend limit reached.' });
+  // Validate input
+  if (!verificationId) {
+    return res.status(400).json({ success: false, message: 'Verification ID is required.' });
+  }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + 60 * 60 * 1000);
-  await pool.query(
-    `UPDATE email_verifications
-     SET code=$1,expires_at=$2, attempts=attempts+1, last_requested=NOW()
-     WHERE user_id=$3`,
-    [code, expires, userId],
-  );
-  // sendEmail(...)
-  res.json({ success: true, attempts: attempts + 1 });
+  try {
+    // Fetch the verification record
+    const result = await pool.query(
+      `SELECT attempts, last_requested, email 
+       FROM email_verifications 
+       WHERE id = $1`,
+      [verificationId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Verification record not found.' });
+    }
+
+    let { attempts, last_requested, email } = result.rows[0];
+    const now = new Date();
+
+    // Reset attempts if 30 minutes have passed since the last request
+    if (now - new Date(last_requested) > 30 * 60 * 1000) {
+      attempts = 0;
+    }
+
+    // Check resend limit
+    if (attempts >= 3) {
+      return res.status(429).json({ success: false, message: 'Resend limit reached. Please wait 30 minutes.' });
+    }
+
+    // Generate new 6-digit code and set expiration (1 hour from now)
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
+
+    // Update the verification record
+    await pool.query(
+      `UPDATE email_verifications 
+       SET code = $1, expires_at = $2, attempts = $3, last_requested = $4 
+       WHERE id = $5`,
+      [newCode, expiresAt, attempts + 1, now, verificationId]
+    );
+
+    // Send the new code via email
+    await sendEmail(email, `Your new verification code is: ${newCode}`);
+
+    res.json({ success: true, message: 'A new code has been sent.', attempts: attempts + 1 });
+  } catch (err) {
+    console.error('Error resending code:', err);
+    res.status(500).json({ success: false, message: 'Error resending code.' });
+  }
 });
 
 // Verify code
