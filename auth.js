@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create account & request verification code
       try {
-        const res = await fetch('https://inventory-management-system-xtb4.onrender.comhttps://inventory-management-system-xtb4.onrender.com/api/signup', {
+        const res = await fetch('https://inventory-management-system-xtb4.onrender.com/api/signup', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ username, email, password })
