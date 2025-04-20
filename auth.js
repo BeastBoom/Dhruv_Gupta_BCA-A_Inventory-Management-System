@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const username = document.getElementById('login-username').value.trim();
       const password = document.getElementById('login-password').value;
       try {
-        const res  = await fetch('${API_BASE_URL}/api/login', {
+        const res = await fetch(`${API_BASE_URL}/api/login`, {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
+          headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           alert('Invalid credentials.');
         }
-      } catch(err) {
+      } catch (err) {
         console.error('Error logging in:', err);
         alert('Login failed. Please try again.');
       }
@@ -76,9 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create account & request verification code
       try {
-        const res = await fetch('${API_BASE_URL}/api/signup', {
+        const res = await fetch(`${API_BASE_URL}/api/signup`, {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
+          headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ username, email, password })
         });
         if (!res.ok) {
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           alert('Signup error: ' + data.message);
         }
-      } catch(err) {
+      } catch (err) {
         console.error('Signup exception:', err);
         alert(`Signup failed: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
       }
@@ -145,9 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const code = document.getElementById('verificationCodeInput').value.trim();
       const verificationId = sessionStorage.getItem('pendingVerificationId');
       try {
-        const res= await fetch('${API_BASE_URL}/api/verify-code', {
+        const res = await fetch(`${API_BASE_URL}/api/verify-code`, {
           method: 'POST',
-          headers:{'Content-Type':'application/json'},
+          headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ verificationId, code })
         });
         if (!res.ok) {
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           alert('❌ ' + result.message);
         }
-      } catch(err) {
+      } catch (err) {
         console.error('Verification error:', err);
         alert(`Verification failed: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
       }
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resendBtn.addEventListener('click', async () => {
       const verificationId = sessionStorage.getItem('pendingVerificationId');
       try {
-        const response = await fetch('${API_BASE_URL}/api/resend-code', {
+        const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationId })
