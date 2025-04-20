@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const username = document.getElementById('login-username').value.trim();
       const password = document.getElementById('login-password').value;
       try {
-        const res  = await fetch('/api/login', {
+        const res  = await fetch('https://inventory-management-system-xtb4.onrender.com/api/login', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ username, password })
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create account & request verification code
       try {
-        const res = await fetch('/api/signup', {
+        const res = await fetch('https://inventory-management-system-xtb4.onrender.comhttps://inventory-management-system-xtb4.onrender.com/api/signup', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ username, email, password })
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const code = document.getElementById('verificationCodeInput').value.trim();
       const verificationId = sessionStorage.getItem('pendingVerificationId');
       try {
-        const res    = await fetch('/api/verify-code', {
+        const res    = await fetch('https://inventory-management-system-xtb4.onrender.com/api/verify-code', {
           method: 'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ verificationId, code })
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resendBtn.addEventListener('click', async () => {
       const verificationId = sessionStorage.getItem('pendingVerificationId');
       try {
-        const response = await fetch('/api/resend-code', {
+        const response = await fetch('https://inventory-management-system-xtb4.onrender.com/api/resend-code', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationId })
