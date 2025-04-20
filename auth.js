@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.success) {
           alert('✅ Verified! You may now log in.');
           sessionStorage.removeItem('verificationId');
-          window.location.href = 'index.html';
+          window.location.href = 'login.html';
         } else {
           alert('❌ ' + data.message);
         }

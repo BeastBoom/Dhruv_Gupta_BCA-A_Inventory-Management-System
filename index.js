@@ -12,11 +12,7 @@ const app = express();
 const PORT = process.env.PG_PORT || 5432;
 
 // Enable CORS and JSON parsing
-app.use(cors({
-  origin: 'https://beastboom.github.io',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'] 
-}));
+app.use(cors());
 app.use(express.json());
 
 const connectionString = `postgres://${process.env.PG_USER}:${process.env.PG_PASSWORD}@${process.env.PG_HOST}:${process.env.PG_PORT}/${process.env.PG_DATABASE}?sslmode=require`;
