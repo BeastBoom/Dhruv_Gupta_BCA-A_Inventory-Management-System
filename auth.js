@@ -76,26 +76,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create account & request verification code
       try {
+        console.log('Sending signup request:', { username, email }); // Debug signup data
         const res = await fetch(`${API_BASE_URL}/api/signup`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ username, email, password })
         });
-        if (!res.ok) {
-          const text = await res.text();
-          console.error('Signup response:', res.status, text);
-          throw new Error(`Signup failed: ${res.status} ${res.statusText}`);
-        }
         const data = await res.json();
+        console.log('Signup response:', data); // Debug response
+        if (!res.ok) {
+          throw new Error(`Signup failed: ${data.message || res.statusText}`);
+        }
         if (data.success) {
-          sessionStorage.setItem('pendingVerificationId', data.pendingId);
+          sessionStorage.setItem('verificationId', data.verificationId);
+          console.log('Stored verificationId:', data.verificationId); // Confirm storage
           openVerificationModal();
         } else {
           alert('Signup error: ' + data.message);
         }
       } catch (err) {
         console.error('Signup exception:', err);
-        alert(`Signup failed: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
+        alert(`Signup failed: ${err.message}`);
       }
     });
   }
@@ -128,8 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     update();
   };
-  setupToggle('login-password','login-toggle');
-  setupToggle('signup-password','signup-toggle');
+  setupToggle('login-password',         'login-toggle');
+  setupToggle('signup-password',        'signup-toggle');
   setupToggle('signup-confirm-password','signup-confirm-toggle');
 
   // Verification Modal & Resend Buttons
@@ -143,36 +144,35 @@ document.addEventListener('DOMContentLoaded', () => {
     verifyForm.addEventListener('submit', async e => {
       e.preventDefault();
       const code = document.getElementById('verificationCodeInput').value.trim();
-      const verificationId = sessionStorage.getItem('pendingVerificationId');
+      const verificationId = sessionStorage.getItem('verificationId');
       console.log('Verification ID:', verificationId);
-      console.log('Entered Code:', document.getElementById('verificationCodeInput').value.trim());
+      console.log('Entered Code:', code);
       console.log('Sending to /api/verify-code:', { verificationId, code });
+      if (!verificationId) {
+        alert('No verification ID found. Please sign up again.');
+        return;
+      }
       try {
         const res = await fetch(`${API_BASE_URL}/api/verify-code`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ verificationId, code })
         });
-        
         const data = await res.json();
         console.log('Server response:', res.status, data);
-
         if (!res.ok) {
-          const text = await res.text();
-          console.error('Verify response:', res.status, text);
-          throw new Error(`Verification failed: ${res.status} ${res.statusText}`);
+          throw new Error(data.message || 'Verification failed');
         }
-        const result = await res.json();
-        if (result.success) {
+        if (data.success) {
           alert('✅ Verified! You may now log in.');
-          sessionStorage.removeItem('pendingVerificationId');
+          sessionStorage.removeItem('verificationId');
           window.location.href = 'index.html';
         } else {
-          alert('❌ ' + result.message);
+          alert('❌ ' + data.message);
         }
       } catch (err) {
         console.error('Verification error:', err);
-        alert(`Verification failed: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
+        alert(`Verification failed: ${err.message}`);
       }
     });
   }
@@ -181,19 +181,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const resendBtn = document.getElementById('resendCodeBtn');
   if (resendBtn) {
     resendBtn.addEventListener('click', async () => {
-      const verificationId = sessionStorage.getItem('pendingVerificationId');
+      const verificationId = sessionStorage.getItem('verificationId');
+      if (!verificationId) {
+        alert('No verification ID found. Please sign up again.');
+        return;
+      }
       try {
         const response = await fetch(`${API_BASE_URL}/api/resend-code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationId })
         });
-        if (!response.ok) {
-          const text = await response.text();
-          console.error('Resend response:', response.status, text);
-          throw new Error(`Resend failed: ${response.status} ${response.statusText}`);
-        }
         const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Resend failed');
+        }
         if (data.success) {
           alert('A new code has been sent.');
         } else {
@@ -204,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch (err) {
         console.error('Resend error:', err);
-        alert(`Could not resend code: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
+        alert(`Could not resend code: ${err.message}`);
       }
     });
   }

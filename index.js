@@ -297,11 +297,22 @@ app.post('/api/resend-code', async (req, res) => {
 // Verify code
 app.post('/api/verify-code', async (req, res) => {
   const { verificationId, code } = req.body;
+
+  // Validate input
+  if (!verificationId || !code) {
+    return res.status(400).json({ success: false, message: 'Verification ID and code are required.' });
+  }
+  if (isNaN(parseInt(verificationId))) {
+    return res.status(400).json({ success: false, message: 'Invalid verification ID.' });
+  }
+
+  console.log('Received verify-code request:', { verificationId, code }); // Debugging log
+
   try {
     // A) fetch the pending row
     const { rows } = await pool.query(
       'SELECT username, email, password_hash, expires_at FROM email_verifications WHERE id = $1 AND code = $2',
-      [verificationId, code]
+      [parseInt(verificationId), code]
     );
     if (!rows.length || new Date(rows[0].expires_at) < new Date()) {
       return res.status(400).json({ success: false, message: 'Invalid or expired code.' });
@@ -310,21 +321,21 @@ app.post('/api/verify-code', async (req, res) => {
 
     // B) create the real user
     await pool.query(
-      `INSERT INTO users (username,email,password)
-         VALUES ($1,$2,$3)`,
+      `INSERT INTO users (username, email, password)
+         VALUES ($1, $2, $3)`,
       [username, email, password_hash]
     );
 
     // C) remove the pending row
     await pool.query(
-      `DELETE FROM email_verifications WHERE id=$1`,
-      [verificationId]
+      `DELETE FROM email_verifications WHERE id = $1`,
+      [parseInt(verificationId)]
     );
 
-    res.json({ success:true, message:'Email verified and account created.' });
+    res.json({ success: true, message: 'Email verified and account created.' });
   } catch (err) {
     console.error('❌ /api/verify-code error:', err);
-    res.status(500).json({ success:false, message:err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
