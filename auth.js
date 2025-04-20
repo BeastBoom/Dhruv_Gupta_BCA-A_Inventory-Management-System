@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch(err) {
         console.error('Error logging in:', err);
-        alert('Login failed.');
+        alert('Login failed. Please try again.');
       }
     });
   }
@@ -79,6 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ username, email, password })
         });
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('Signup response:', res.status, text);
+          throw new Error(`Signup failed: ${res.status} ${res.statusText}`);
+        }
         const data = await res.json();
         if (data.success) {
           sessionStorage.setItem('pendingVerificationId', data.pendingId);
@@ -88,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch(err) {
         console.error('Signup exception:', err);
-        alert('Signup failed unexpectedly.');
+        alert(`Signup failed: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
       }
     });
   }
@@ -143,16 +148,22 @@ document.addEventListener('DOMContentLoaded', () => {
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ verificationId, code })
         });
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('Verify response:', res.status, text);
+          throw new Error(`Verification failed: ${res.status} ${res.statusText}`);
+        }
         const result = await res.json();
         if (result.success) {
           alert('✅ Verified! You may now log in.');
+          sessionStorage.removeItem('pendingVerificationId');
           window.location.href = 'index.html';
         } else {
           alert('❌ ' + result.message);
         }
       } catch(err) {
         console.error('Verification error:', err);
-        alert('Verification failed.');
+        alert(`Verification failed: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
       }
     });
   }
@@ -168,6 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationId })
         });
+        if (!response.ok) {
+          const text = await response.text();
+          console.error('Resend response:', response.status, text);
+          throw new Error(`Resend failed: ${response.status} ${response.statusText}`);
+        }
         const data = await response.json();
         if (data.success) {
           alert('A new code has been sent.');
@@ -179,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch (err) {
         console.error('Resend error:', err);
-        alert('Could not resend code.');
+        alert(`Could not resend code: ${err.message.includes('405') ? 'Server configuration error (Method Not Allowed). Please contact support.' : 'Could not connect to server.'}`);
       }
     });
   }

@@ -182,19 +182,20 @@ async function logProductHistory(
 
 // Signup Endpoint
 app.post('/api/signup', async (req, res) => {
+  console.log('Received signup request:', req.body); // Debugging log
   const { username, email, password } = req.body;
   // 1) presence check
   if (!username || !email || !password) {
-    return res.status(400).json({ success:false, message:'Username, email & password are required.' });
+    return res.status(400).json({ success: false, message: 'Username, email & password are required.' });
   }
   // 2) format checks
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ success:false, message:'Invalid email format.' });
+    return res.status(400).json({ success: false, message: 'Invalid email format.' });
   }
   if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password)) {
     return res.status(400).json({
-      success:false,
-      message:'Password must be 8+ chars with uppercase, lowercase, number & special.'
+      success: false,
+      message: 'Password must be 8+ chars with uppercase, lowercase, number & special.'
     });
   }
 
@@ -202,14 +203,14 @@ app.post('/api/signup', async (req, res) => {
     // A) hash password
     const password_hash = await bcrypt.hash(password, 10);
     // B) generate code
-    const code = Math.floor(100000 + Math.random()*900000).toString();
-    const expires_at = new Date(Date.now() + 60*60*1000);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires_at = new Date(Date.now() + 60 * 60 * 1000);
 
     // C) store pending signup
     const ev = await pool.query(
       `INSERT INTO email_verifications
          (username, email, password_hash, code, expires_at)
-       VALUES ($1,$2,$3,$4,$5)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
       [username, email, password_hash, code, expires_at]
     );
@@ -218,16 +219,15 @@ app.post('/api/signup', async (req, res) => {
     // D) send code
     await sendEmail(email, code);
 
-    // E) respond with the pending‐ID
+    // E) respond with the pending-ID
     res.json({
       success: true,
       message: 'Verification code sent.',
       pendingId
     });
-
   } catch (err) {
     console.error('❌ /api/signup error:', err);
-    res.status(500).json({ success:false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
