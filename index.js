@@ -218,7 +218,7 @@ app.post('/api/signup', async (req, res) => {
        RETURNING id`,
       [username, email, password_hash, code, expires_at]
     );
-    const pendingId = ev.rows[0].id;
+    const verificationId = ev.rows[0].id;
 
     // D) send code
     await sendEmail(email, code);
@@ -227,7 +227,7 @@ app.post('/api/signup', async (req, res) => {
     res.json({
       success: true,
       message: 'Verification code sent.',
-      pendingId
+      verificationId
     });
   } catch (err) {
     console.error('❌ /api/signup error:', err);
@@ -318,7 +318,7 @@ app.post('/api/verify-code', async (req, res) => {
     // C) remove the pending row
     await pool.query(
       `DELETE FROM email_verifications WHERE id=$1`,
-      [pendingId]
+      [verificationId]
     );
 
     res.json({ success:true, message:'Email verified and account created.' });
