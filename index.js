@@ -292,17 +292,15 @@ app.post('/api/resend-code', async (req, res) => {
 
 // Verify code
 app.post('/api/verify-code', async (req, res) => {
-  const { pendingId, code } = req.body;
+  const { verificationId, code } = req.body;
   try {
     // A) fetch the pending row
     const { rows } = await pool.query(
-      `SELECT username,email,password_hash,expires_at
-         FROM email_verifications
-        WHERE id=$1 AND code=$2`,
-      [pendingId, code]
+      'SELECT expires_at FROM email_verifications WHERE id = $1 AND code = $2',
+      [verificationId, code]
     );
     if (!rows.length || new Date(rows[0].expires_at) < new Date()) {
-      return res.status(400).json({ success:false, message:'Invalid or expired code.' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired code.' });
     }
     const { username, email, password_hash } = rows[0];
 

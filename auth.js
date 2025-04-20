@@ -128,8 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     update();
   };
-  setupToggle('login-password',         'login-toggle');
-  setupToggle('signup-password',        'signup-toggle');
+  setupToggle('login-password','login-toggle');
+  setupToggle('signup-password','signup-toggle');
   setupToggle('signup-confirm-password','signup-confirm-toggle');
 
   // Verification Modal & Resend Buttons
@@ -144,12 +144,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const code = document.getElementById('verificationCodeInput').value.trim();
       const verificationId = sessionStorage.getItem('pendingVerificationId');
+      console.log('Verification ID:', verificationId);
+      console.log('Entered Code:', document.getElementById('verificationCodeInput').value.trim());
+      console.log('Sending to /api/verify-code:', { verificationId, code });
       try {
         const res = await fetch(`${API_BASE_URL}/api/verify-code`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ verificationId, code })
         });
+        
+        const data = await res.json();
+        console.log('Server response:', res.status, data);
+
         if (!res.ok) {
           const text = await res.text();
           console.error('Verify response:', res.status, text);
