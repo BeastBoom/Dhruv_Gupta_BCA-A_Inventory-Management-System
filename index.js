@@ -296,7 +296,7 @@ app.post('/api/verify-code', async (req, res) => {
   try {
     // A) fetch the pending row
     const { rows } = await pool.query(
-      'SELECT expires_at FROM email_verifications WHERE id = $1 AND code = $2',
+      'SELECT username, email, password_hash, expires_at FROM email_verifications WHERE id = $1 AND code = $2',
       [verificationId, code]
     );
     if (!rows.length || new Date(rows[0].expires_at) < new Date()) {
