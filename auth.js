@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Panel Toggle (login ↔ signup)
   const signUpButton = document.getElementById('signUp');
   const signInButton = document.getElementById('signIn');
-  const container    = document.getElementById('container');
+  const container = document.getElementById('container');
 
   signUpButton.addEventListener('click', () => {
     container.classList.add('right-panel-active');
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/login`, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
@@ -51,14 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const emailEl   = document.getElementById('signup-email');
-      const userEl    = document.getElementById('signup-username');
-      const passEl    = document.getElementById('signup-password');
+      const emailEl = document.getElementById('signup-email');
+      const userEl = document.getElementById('signup-username');
+      const passEl = document.getElementById('signup-password');
       const confirmEl = document.getElementById('signup-confirm-password');
-      const email     = emailEl.value.trim();
-      const username  = userEl.value.trim();
-      const password  = passEl.value;
-      const confirm   = confirmEl.value;
+      const email = emailEl.value.trim();
+      const username = userEl.value.trim();
+      const password = passEl.value;
+      const confirm = confirmEl.value;
 
       // Basic client-side validation
       if (username.length < 3) {
@@ -76,23 +76,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Create account & request verification code
       try {
-        console.log('Sending signup request:', { username, email }); // Debug signup data
+        console.log('Sending signup request:', { username, email }); // Debug input
         const res = await fetch(`${API_BASE_URL}/api/signup`, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, email, password })
         });
         const data = await res.json();
         console.log('Signup response:', data); // Debug response
         if (!res.ok) {
-          throw new Error(`Signup failed: ${data.message || res.statusText}`);
+          throw new Error(data.message || `Signup failed: ${res.statusText}`);
         }
-        if (data.success) {
-          sessionStorage.setItem('verificationId', data.verificationId);
-          console.log('Stored verificationId:', data.verificationId); // Confirm storage
+        if (data.success && data.verificationId) {
+          sessionStorage.setItem('verificationId', data.verificationId.toString()); // Ensure string
+          console.log('Stored verificationId:', sessionStorage.getItem('verificationId')); // Confirm storage
           openVerificationModal();
         } else {
-          alert('Signup error: ' + data.message);
+          alert('Signup error: ' + (data.message || 'No verification ID received'));
         }
       } catch (err) {
         console.error('Signup exception:', err);
@@ -129,12 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     update();
   };
-  setupToggle('login-password',         'login-toggle');
-  setupToggle('signup-password',        'signup-toggle');
-  setupToggle('signup-confirm-password','signup-confirm-toggle');
+  setupToggle('login-password', 'login-toggle');
+  setupToggle('signup-password', 'signup-toggle');
+  setupToggle('signup-confirm-password', 'signup-confirm-toggle');
 
   // Verification Modal & Resend Buttons
   window.openVerificationModal = () => {
+    console.log('Opening verification modal, verificationId:', sessionStorage.getItem('verificationId')); // Debug
     document.getElementById('verificationModal').style.display = 'block';
   };
 
@@ -148,14 +149,14 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Verification ID:', verificationId);
       console.log('Entered Code:', code);
       console.log('Sending to /api/verify-code:', { verificationId, code });
-      if (!verificationId) {
+      if (!verificationId || verificationId === 'undefined') {
         alert('No verification ID found. Please sign up again.');
         return;
       }
       try {
         const res = await fetch(`${API_BASE_URL}/api/verify-code`, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ verificationId, code })
         });
         const data = await res.json();
@@ -182,7 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (resendBtn) {
     resendBtn.addEventListener('click', async () => {
       const verificationId = sessionStorage.getItem('verificationId');
-      if (!verificationId) {
+      console.log('Resend verificationId:', verificationId); // Debug
+      if (!verificationId || verificationId === 'undefined') {
         alert('No verification ID found. Please sign up again.');
         return;
       }
@@ -193,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({ verificationId })
         });
         const data = await response.json();
+        console.log('Resend response:', data); // Debug
         if (!response.ok) {
           throw new Error(data.message || 'Resend failed');
         }
