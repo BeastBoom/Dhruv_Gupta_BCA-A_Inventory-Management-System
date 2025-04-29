@@ -1180,45 +1180,93 @@ app.delete('/api/orders/:id', requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
   const client = await pool.connect();
+  
   try {
+    console.log(`Attempting to delete order ${id} for user ${userId}`);
     await client.query('BEGIN');
-    // Refund stock for order items and log history
+    
+    // Get order items before deleting them to refund stock
     const itemsResult = await client.query(
       'SELECT product_id, quantity FROM order_items WHERE order_id = $1 AND user_id = $2',
-      [id, userId],
+      [id, userId]
     );
-    const items = itemsResult.rows;
-    for (const item of items) {
-      await client.query(
-        'UPDATE products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3',
-        [item.quantity, item.product_id, userId],
+    
+    if (itemsResult.rowCount === 0) {
+      console.log(`No items found for order ${id}`);
+    } else {
+      console.log(`Found ${itemsResult.rowCount} items to refund for order ${id}`);
+    }
+    
+    // Process each item to refund stock
+    for (const item of itemsResult.rows) {
+      const product_id = item.product_id;
+      const quantity = parseInt(item.quantity, 10);
+      
+      // Get product info first
+      const productResult = await client.query(
+        'SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2',
+        [product_id, userId]
       );
+      
+      if (productResult.rowCount === 0) {
+        console.warn(`Could not find product ${product_id} for refunding`);
+        continue; // Skip this item but continue with others
+      }
+      
+      const product = productResult.rows[0];
+      const newQuantity = parseInt(product.quantity, 10) + quantity;
+      
+      // Update product quantity
+      await client.query(
+        'UPDATE products SET quantity = $1 WHERE id = $2 AND user_id = $3',
+        [newQuantity, product_id, userId]
+      );
+      
+      // Log history
       await logProductHistory(
-        item.product_id,
-        product.name, // 'product.name' from the context
+        product_id,
+        product.name,
         'Order Deleted - Refunded',
-        `Refunded quantity ${item.quantity} for deleted order ${id}`,
-        userId,
+        `Refunded quantity ${quantity} for deleted order ${id}`,
+        userId
       );
     }
+    
+    // Delete the order items
     await client.query(
       'DELETE FROM order_items WHERE order_id = $1 AND user_id = $2',
-      [id, userId],
+      [id, userId]
     );
+    
+    // Delete the order itself
     const result = await client.query(
       'DELETE FROM orders WHERE id = $1 AND user_id = $2',
-      [id, userId],
+      [id, userId]
     );
+    
     if (result.rowCount === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).send('Order not found');
+      console.log(`Order ${id} not found for user ${userId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
     }
+    
     await client.query('COMMIT');
-    res.json({ success: true, message: 'Order deleted successfully' });
+    console.log(`Order ${id} successfully deleted`);
+    res.json({ 
+      success: true, 
+      message: 'Order deleted successfully' 
+    });
+    
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error deleting order:', err);
-    res.status(500).json({ success: false, message: 'Error deleting order' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting order' 
+    });
   } finally {
     client.release();
   }
