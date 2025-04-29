@@ -1402,26 +1402,119 @@ app.listen(PORT, () => {
 });
 
 // Every 10 minutes, process pending alerts:
-setInterval(
-  async () => {
+// Process reorder alerts every 5 minutes
+setInterval(async () => {
+  console.log("Checking for products that need reordering...");
+  try {
+    // Get all active alerts with product information
     const { rows } = await pool.query(`
-    SELECT ra.id, p.name AS product_name, v.email AS vendor_email
+      SELECT 
+        ra.id, 
+        ra.threshold_qty,
+        ra.last_notified,
+        p.id AS product_id,
+        p.name AS product_name,
+        p.quantity AS current_quantity,
+        v.id AS vendor_id,
+        v.email AS vendor_email,
+        v.name AS vendor_name,
+        u.email AS user_email
       FROM reorder_alerts ra
       JOIN products p ON p.id = ra.product_id
-      JOIN vendors  v ON v.id = ra.vendor_id
-  `);
-    for (let { id, product_name, vendor_email } of rows) {
-      try {
-        await sendEmail(
-          vendor_email,
-          `Reorder Request: ${product_name}`,
-          `Our stock of "${product_name}" is below its reorder threshold. Please send us your quotation.`,
-        );
-      } catch (err) {
-        console.error(`Failed to email alert ${id}:`, err);
-        // leave it in the table to retry next interval
+      JOIN vendors v ON v.id = ra.vendor_id
+      JOIN users u ON u.id = ra.user_id
+      WHERE p.quantity < ra.threshold_qty  -- Only where current quantity is below threshold
+    `);
+    
+    console.log(`Found ${rows.length} products below threshold`);
+    
+    for (let alert of rows) {
+      // Determine if we should send a notification
+      const shouldNotify = 
+        // Never notified before
+        !alert.last_notified || 
+        // OR was replenished and then fell below threshold again (compare last_notified time with quantity changes)
+        await wasReplenishedSinceLastNotification(alert.product_id, alert.last_notified);
+      
+      if (shouldNotify) {
+        try {
+          console.log(`Sending reorder notification for ${alert.product_name} to ${alert.vendor_name}`);
+          
+          // Notify the vendor
+          await sendEmail(
+            alert.vendor_email,
+            `Low Stock Alert: ${alert.product_name}`,
+            `
+Dear ${alert.vendor_name},
+
+Our inventory system has detected that stock of "${alert.product_name}" is below the reorder threshold.
+
+Current quantity: ${alert.current_quantity}
+Threshold: ${alert.threshold_qty}
+
+Please send us your quotation for this product at your earliest convenience.
+
+Thank you,
+Inventory Management System
+            `
+          );
+          
+          // Also notify the store owner (optional)
+          if (alert.user_email) {
+            await sendEmail(
+              alert.user_email,
+              `Low Stock Alert: ${alert.product_name}`,
+              `
+Your inventory system has notified ${alert.vendor_name} that "${alert.product_name}" stock is low.
+
+Current quantity: ${alert.current_quantity}
+Threshold: ${alert.threshold_qty}
+
+A reorder request has been sent to the vendor.
+              `
+            );
+          }
+          
+          // Update the last_notified timestamp
+          await pool.query(
+            `UPDATE reorder_alerts 
+             SET last_notified = NOW(), attempts = attempts + 1 
+             WHERE id = $1`,
+            [alert.id]
+          );
+          
+          console.log(`Successfully sent notification for ${alert.product_name}`);
+        } catch (err) {
+          console.error(`Failed to email alert ${alert.id} for ${alert.product_name}:`, err);
+          // Don't delete the record, we'll try again next time
+        }
+      } else {
+        console.log(`Skipping notification for ${alert.product_name} - already notified`);
       }
     }
-  },
-  5 * 60 * 1000,
-);
+  } catch (error) {
+    console.error("Error processing reorder alerts:", error);
+  }
+}, 5 * 60 * 1000); // Check every 5 minutes
+
+// Helper function to determine if a product was replenished since last notification
+async function wasReplenishedSinceLastNotification(productId, lastNotified) {
+  if (!lastNotified) return false;
+  
+  try {
+    // Check if there were any additions to inventory after the last notification
+    const result = await pool.query(
+      `SELECT COUNT(*) AS replenishment_count
+       FROM product_history
+       WHERE product_id = $1
+         AND changed_at > $2
+         AND change_type IN ('Inventory Refill', 'Order Edited - Refunded', 'Order Deleted - Refunded')`,
+      [productId, lastNotified]
+    );
+    
+    return parseInt(result.rows[0].replenishment_count) > 0;
+  } catch (err) {
+    console.error("Error checking for replenishment:", err);
+    return false;
+  }
+}
