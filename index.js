@@ -1417,12 +1417,11 @@ setInterval(
           `Reorder Request: ${product_name}`,
           `Our stock of "${product_name}" is below its reorder threshold. Please send us your quotation.`,
         );
-        await pool.query(`DELETE FROM reorder_alerts WHERE id = $1`, [id]);
       } catch (err) {
         console.error(`Failed to email alert ${id}:`, err);
         // leave it in the table to retry next interval
       }
     }
   },
-  10 * 60 * 1000,
+  5 * 60 * 1000,
 );
