@@ -12,7 +12,13 @@ const app = express();
 const PORT = process.env.PG_PORT || 5432;
 
 // Enable CORS and JSON parsing
-app.use(cors());
+app.use(
+  cors({
+    origin: '*',               // allow all origins (or lock this down to your front-end URL)
+    methods: ['GET','POST','PUT','DELETE'],
+    allowedHeaders: ['Content-Type','x-user-id']
+  })
+);
 app.use(express.json());
 
 const connectionString = `postgres://${process.env.PG_USER}:${process.env.PG_PASSWORD}@${process.env.PG_HOST}:${process.env.PG_PORT}/${process.env.PG_DATABASE}?sslmode=require`;
