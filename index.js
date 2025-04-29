@@ -1323,6 +1323,38 @@ app.get('/api/alerts', requireUser, async (req, res) => {
   }
 });
 
+// Add this endpoint to your backend
+app.put('/api/alerts/:id', requireUser, async (req, res) => {
+  const userId = req.userId;
+  const alertId = req.params.id;
+  const { product_id, vendor_id, threshold_qty } = req.body;
+  
+  if (!product_id || !threshold_qty) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'product_id & threshold_qty required' });
+  }
+  
+  try {
+    const result = await pool.query(
+      `UPDATE reorder_alerts 
+       SET product_id = $1, vendor_id = $2, threshold_qty = $3
+       WHERE id = $4 AND user_id = $5
+       RETURNING *`,
+      [product_id, vendor_id, threshold_qty, alertId, userId]
+    );
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Alert not found' });
+    }
+    
+    res.json({ success: true, alert: result.rows[0] });
+  } catch (err) {
+    console.error('Error updating alert:', err);
+    res.status(500).json({ success: false, message: 'Could not update alert' });
+  }
+});
+
 app.delete('/api/alerts/:id', requireUser, async (req, res) => {
   await pool.query(
     `DELETE FROM reorder_alerts

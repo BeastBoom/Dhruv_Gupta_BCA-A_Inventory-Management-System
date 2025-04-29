@@ -101,7 +101,7 @@ async function fetchAlerts() {
       {
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': userId,
+          'x-user-id': sessionStorage.getItem('userId'),
         },
       },
     );
@@ -121,7 +121,7 @@ async function fetchAlerts() {
       <td>${a.threshold_qty}</td>
       <td>${a.last_notified || 'Never'}</td>
       <td>
-        <button class="btn btn-edit" onclick="openAlertModal(${a.id}, ${a.product_id}, ${a.threshold_qty})">Edit</button>
+        <button class="btn btn-edit" onclick="openAlertModal(${a.id}, ${a.product_id}, ${a.vendor_id}, ${a.threshold_qty})">Edit</button>
         <button class="btn btn-delete" onclick="deleteAlert(${a.id})">Delete</button>
       </td>
     </tr>
@@ -134,12 +134,13 @@ async function fetchAlerts() {
   }
 }
 
-function openAlertModal(id = null, productId = '', threshold = '') {
+// Update this function to include vendorId parameter
+function openAlertModal(id = null, productId = '', vendorId = '', threshold = '') {
   editingAlertId = id;
-  document.getElementById('alertModalTitle').textContent = id
-    ? 'Edit Alert'
-    : 'Add Alert';
+  document.getElementById('alertModalTitle')
+    .textContent = id ? 'Edit Alert' : 'Add Alert';
   document.getElementById('alertProductSelect').value = productId;
+  document.getElementById('alertVendorSelect').value = vendorId; // Set vendor dropdown
   document.getElementById('alertThreshold').value = threshold;
   document.getElementById('alertModal').style.display = 'block';
 }
@@ -157,9 +158,18 @@ async function handleAlertSubmit(e) {
   const threshold_qty = +document.getElementById('alertThreshold').value;
   if (!product_id || !threshold_qty) return alert('Fill all fields');
 
-  const url =
-    'https://inventory-management-system-xtb4.onrender.com/api/alerts';
-  const method = 'POST';
+  let url, method;
+  
+  if (editingAlertId) {
+    // We're editing an existing alert
+    url = `https://inventory-management-system-xtb4.onrender.com/api/alerts/${editingAlertId}`;
+    method = 'PUT'; // or 'PATCH' depending on your API
+  } else {
+    // We're creating a new alert
+    url = 'https://inventory-management-system-xtb4.onrender.com/api/alerts';
+    method = 'POST';
+  }
+  
   const body = { product_id, vendor_id, threshold_qty };
 
   await fetch(url, {
