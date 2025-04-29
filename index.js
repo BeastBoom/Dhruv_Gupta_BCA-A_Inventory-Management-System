@@ -836,9 +836,13 @@ app.get('/api/orders', requireUser, async (req, res) => {
   }
 });
 
+// Find the pre-check section in your POST /api/orders endpoint and replace it with this:
+
+// POST endpoint to create a new order
 app.post('/api/orders', requireUser, async (req, res) => {
   const userId = req.userId;
-  const { customer_id, items } = req.body;
+  const { customer_id, items, order_date } = req.body;
+
   if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
     return res
       .status(400)
@@ -848,127 +852,174 @@ app.post('/api/orders', requireUser, async (req, res) => {
   try {
     // Pre-check stock for each order item
     for (const item of items) {
-      const { product_id, quantity } = item;
-      const productResult = await client.query(
-        'SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2',
-        [product_id, userId]
-      );
-      if (productResult.rowCount === 0) {
-        return res.status(404).json({
-          success: false,
-          message: `Product with id ${product_id} not found`,
-        });
-      }
-      const product = productResult.rows[0];
-      if (parseInt(product.quantity, 10) < parseInt(quantity, 10)) {
+      // Validate item structure
+      if (!item.product_id || !item.quantity) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`,
+          message: 'Each item must have product_id and quantity',
+        });
+      }
+
+      const product_id = parseInt(item.product_id, 10);
+      const requestedQty = parseInt(item.quantity, 10);
+
+      // Validate parsed values
+      if (isNaN(product_id) || isNaN(requestedQty) || requestedQty <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid product_id or quantity for product ${item.product_id}`,
+        });
+      }
+
+      try {
+        const productResult = await pool.query(
+          'SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2',
+          [product_id, userId],
+        );
+
+        if (productResult.rowCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: `Product with id ${product_id} not found`,
+          });
+        }
+
+        const product = productResult.rows[0];
+        const availableQty = parseInt(product.quantity, 10) || 0;
+
+        if (availableQty < requestedQty) {
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock for ${product.name}. Available: ${availableQty}, requested: ${requestedQty}.`,
+          });
+        }
+      } catch (dbError) {
+        console.error(
+          `Database error checking product ${product_id}:`,
+          dbError,
+        );
+        return res.status(500).json({
+          success: false,
+          message: 'Database error checking product',
         });
       }
     }
-  } catch (error) {
-    console.error('Error checking product quantities:', error);
-    return res
+
+    // Continue with order creation...
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Add order_date if provided, otherwise use current date
+      const orderDate = order_date || new Date().toISOString().split('T')[0];
+
+      const orderResult = await client.query(
+        'INSERT INTO orders (customer_id, user_id, order_date) VALUES ($1, $2, $3) RETURNING id',
+        [customer_id, userId, orderDate],
+      );
+
+      const orderId = orderResult.rows[0].id;
+
+      for (const item of items) {
+        const product_id = parseInt(item.product_id, 10);
+        const quantity = parseInt(item.quantity, 10);
+
+        // Get the product details first
+        const productResult = await client.query(
+          'SELECT id, name, quantity, category_id, threshold_qty AS threshold FROM products WHERE id = $1 AND user_id = $2',
+          [product_id, userId],
+        );
+
+        if (productResult.rowCount === 0) {
+          throw new Error(
+            `Product with id ${product_id} not found during processing`,
+          );
+        }
+
+        const product = productResult.rows[0];
+        const currentQty = parseInt(product.quantity, 10);
+        const newQty = currentQty - quantity;
+
+        // Deduct the quantity from product stock
+        await client.query(
+          'UPDATE products SET quantity = $1 WHERE id = $2 AND user_id = $3',
+          [newQty, product_id, userId],
+        );
+
+        // Only create threshold alerts if the product has a threshold defined and we're below it
+        if (product.threshold && newQty < product.threshold) {
+          try {
+            // Find vendors for this product category
+            const vendorResult = await client.query(
+              `SELECT id FROM vendors WHERE supply_area = $1 AND user_id = $2`,
+              [product.category_id, userId],
+            );
+
+            // Create alerts for each vendor
+            for (const vendor of vendorResult.rows) {
+              await client.query(
+                `INSERT INTO reorder_alerts (product_id, vendor_id, threshold_qty, user_id)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (product_id, vendor_id) DO NOTHING`,
+                [product_id, vendor.id, product.threshold, userId],
+              );
+            }
+          } catch (alertError) {
+            console.warn('Failed to create reorder alert:', alertError);
+            // Continue with the order even if alerts fail
+          }
+        }
+
+        // Log the order creation event
+        await logProductHistory(
+          product_id,
+          product.name,
+          'Order Created',
+          `Quantity reduced by ${quantity} due to order ${orderId}`,
+          userId,
+        );
+
+        // Insert the order item record
+        await client.query(
+          'INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)',
+          [orderId, product_id, quantity, userId],
+        );
+      }
+
+      await client.query(
+        `UPDATE orders SET order_value = (
+          SELECT SUM(p.price * oi.quantity)
+          FROM order_items oi
+          JOIN products p ON oi.product_id = p.id
+          WHERE oi.order_id = $1
+        ) WHERE id = $1`,
+        [orderId],
+      );
+
+      await client.query('COMMIT');
+      res.status(201).json({ success: true, order: { id: orderId } });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Error creating order:', err);
+      res.status(500).json({ success: false, message: 'Error creating order' });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error checking product quantities:', err);
+    res
       .status(500)
       .json({ success: false, message: 'Error checking product quantities' });
   }
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const orderResult = await client.query(
-      'INSERT INTO orders (customer_id, user_id) VALUES ($1, $2) RETURNING id',
-      [customer_id, userId],
-    );
-    const orderId = orderResult.rows[0].id;
-
-    for (const item of items) {
-      const { product_id, quantity } = item;
-      // Deduct the quantity from product stock
-      await client.query(
-        'UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3',
-        [quantity, product_id, userId]
-      );
-
-      const newQty = product.quantity - quantity;
-
-      // (inside the same transaction/client)
-      if (newQty < product.threshold) {
-        await client.query(
-          `INSERT INTO reorder_alerts (product_id, vendor_id)
-       SELECT $1, v.id
-         FROM vendors v
-        WHERE v.supply_category = $2`,
-          [product.id, product.category_id],
-        );
-      }
-
-      if (product.threshold && newQty < product.threshold) {
-        // Get vendors that supply this category
-        const vendorResult = await client.query(
-          `SELECT id FROM vendors WHERE supply_area = $1 AND user_id = $2`,
-          [product.category_id, userId]
-        );
-        
-        // Create alerts for each vendor
-        for (const vendor of vendorResult.rows) {
-          await client.query(
-            `INSERT INTO reorder_alerts (product_id, vendor_id, threshold_qty, user_id)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (product_id, vendor_id) DO NOTHING`,
-            [product_id, vendor.id, product.threshold, userId]
-          );
-        }
-      }
-
-      // Retrieve product name for logging
-      const prodResult = await client.query(
-        'SELECT name FROM products WHERE id = $1 AND user_id = $2',
-        [product_id, userId],
-      );
-      const prodName =
-        prodResult.rowCount > 0 ? prodResult.rows[0].name : 'Unknown';
-      // Log the order creation event with the correct product name
-      await logProductHistory(
-        product_id,
-        prodName,
-        'Order Created',
-        `Quantity reduced by ${quantity} due to order ${orderId}`,
-        userId,
-      );
-      // Insert the order item record
-      await client.query(
-        'INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)',
-        [orderId, product_id, quantity, userId],
-      );
-    }
-    await client.query(
-      `UPDATE orders SET order_value = (
-         SELECT SUM(p.price * oi.quantity)
-         FROM order_items oi
-         JOIN products p ON oi.product_id = p.id
-         WHERE oi.order_id = $1
-       ) WHERE id = $1`,
-      [orderId],
-    );
-    await client.query('COMMIT');
-    res.status(201).json({ success: true, order: { id: orderId } });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error creating order:', err);
-    res.status(500).json({ success: false, message: 'Error creating order' });
-  } finally {
-    client.release();
-  }
 });
 
+// PUT endpoint to update an existing order
 app.put('/api/orders/:id', requireUser, async (req, res) => {
   const userId = req.userId;
   const { id } = req.params; // Order ID to update
   const { customer_id, order_date, items } = req.body;
 
-  // Validate incoming data (ensure order_date is present and non‑empty)
+  // Validate incoming data
   if (!customer_id) {
     console.error('Validation Error: Missing customer_id');
     return res
@@ -981,21 +1032,11 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
       .status(400)
       .json({ success: false, message: 'Missing order_date' });
   }
-  if (!items) {
-    console.error('Validation Error: Missing items array');
-    return res.status(400).json({ success: false, message: 'Missing items' });
-  }
-  if (!Array.isArray(items)) {
-    console.error('Validation Error: Items is not an array');
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    console.error('Validation Error: Missing or invalid items array');
     return res
       .status(400)
-      .json({ success: false, message: 'Items must be an array' });
-  }
-  if (items.length === 0) {
-    console.error('Validation Error: Items array is empty');
-    return res
-      .status(400)
-      .json({ success: false, message: 'Items array is empty' });
+      .json({ success: false, message: 'Missing or invalid items array' });
   }
 
   const client = await pool.connect();
@@ -1025,52 +1066,35 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
       [id, userId],
     );
     const existingItems = existingResult.rows;
+
     for (const item of existingItems) {
-      await client.query(
-        'UPDATE products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3',
-        [item.quantity, item.product_id, userId],
-      );
-
-      const newQty = product.quantity - quantity;
-
-      // (inside the same transaction/client)
-      if (newQty < product.threshold) {
-        await client.query(
-          `INSERT INTO reorder_alerts (product_id, vendor_id)
-       SELECT $1, v.id
-         FROM vendors v
-        WHERE v.supply_category = $2`,
-          [product.id, product.category_id],
-        );
-      }
-
-      if (product.threshold && newQty < product.threshold) {
-        // Get vendors that supply this category
-        const vendorResult = await client.query(
-          `SELECT id FROM vendors WHERE supply_area = $1 AND user_id = $2`,
-          [product.category_id, userId]
-        );
-        
-        // Create alerts for each vendor
-        for (const vendor of vendorResult.rows) {
-          await client.query(
-            `INSERT INTO reorder_alerts (product_id, vendor_id, threshold_qty, user_id)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (product_id, vendor_id) DO NOTHING`,
-            [product_id, vendor.id, product.threshold, userId]
-          );
-        }
-      }
-
-      // Retrieve product name for logging
-      const prodRes = await client.query(
-        'SELECT name FROM products WHERE id = $1 AND user_id = $2',
+      // Get the product details first
+      const productRes = await client.query(
+        'SELECT id, name, quantity, category_id, threshold_qty AS threshold FROM products WHERE id = $1 AND user_id = $2',
         [item.product_id, userId],
       );
-      const prodName = prodRes.rowCount > 0 ? prodRes.rows[0].name : 'Unknown';
+
+      if (productRes.rowCount === 0) {
+        console.warn(
+          `Cannot find product ${item.product_id} to refund quantities`,
+        );
+        continue; // Skip this item but continue with the rest
+      }
+
+      const product = productRes.rows[0];
+      const currentQty = parseInt(product.quantity, 10);
+      const newQty = currentQty + parseInt(item.quantity, 10);
+
+      // Update the product quantity
+      await client.query(
+        'UPDATE products SET quantity = $1 WHERE id = $2 AND user_id = $3',
+        [newQty, item.product_id, userId],
+      );
+
+      // Log history for this refund
       await logProductHistory(
         item.product_id,
-        prodName,
+        product.name,
         'Order Edited - Refunded',
         `Refunded quantity ${item.quantity} for order ${id}`,
         userId,
@@ -1089,11 +1113,15 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
 
     // Process new order items: check stock, deduct new quantity, log history, and insert new order items
     for (const item of items) {
-      const { product_id, quantity } = item;
+      const product_id = parseInt(item.product_id, 10);
+      const quantity = parseInt(item.quantity, 10);
+
+      // Get the product details
       const productResult = await client.query(
-        'SELECT name, quantity, price FROM products WHERE id = $1 AND user_id = $2',
+        'SELECT id, name, quantity, price, category_id, threshold_qty AS threshold FROM products WHERE id = $1 AND user_id = $2',
         [product_id, userId],
       );
+
       if (productResult.rowCount === 0) {
         console.error(
           `Product with id ${product_id} not found for user ${userId}`,
@@ -1104,29 +1132,63 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
           message: `Product with id ${product_id} not found`,
         });
       }
+
       const product = productResult.rows[0];
-      if (parseInt(product.quantity, 10) < parseInt(quantity, 10)) {
+      const availableQty = parseInt(product.quantity, 10);
+
+      if (availableQty < quantity) {
         console.error(
-          `Insufficient stock for ${product.name}: available ${product.quantity}, requested ${quantity}`,
+          `Insufficient stock for ${product.name}: available ${availableQty}, requested ${quantity}`,
         );
         await client.query('ROLLBACK');
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${product.name}. Available: ${product.quantity}, requested: ${quantity}.`,
+          message: `Insufficient stock for ${product.name}. Available: ${availableQty}, requested: ${quantity}.`,
         });
       }
+
+      const newQty = availableQty - quantity;
+
       // Deduct new quantity from product stock
       await client.query(
-        'UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3',
-        [quantity, product_id, userId],
+        'UPDATE products SET quantity = $1 WHERE id = $2 AND user_id = $3',
+        [newQty, product_id, userId],
       );
+
+      // Check for threshold alerts
+      if (product.threshold && newQty < product.threshold) {
+        try {
+          // Find vendors for this product category
+          const vendorResult = await client.query(
+            `SELECT id FROM vendors WHERE supply_area = $1 AND user_id = $2`,
+            [product.category_id, userId],
+          );
+
+          // Create alerts for each vendor
+          for (const vendor of vendorResult.rows) {
+            await client.query(
+              `INSERT INTO reorder_alerts (product_id, vendor_id, threshold_qty, user_id)
+              VALUES ($1, $2, $3, $4)
+              ON CONFLICT (product_id, vendor_id) DO NOTHING`,
+              [product_id, vendor.id, product.threshold, userId],
+            );
+          }
+        } catch (alertError) {
+          console.warn('Failed to create reorder alert:', alertError);
+          // Continue with the order even if alerts fail
+        }
+      }
+
+      // Log the product update
       await logProductHistory(
         product_id,
         product.name,
-        `Order Edited - Deducted`,
+        'Order Edited - Deducted',
         `Deducted quantity ${quantity} for order ${id}`,
         userId,
       );
+
+      // Insert the order item
       await client.query(
         'INSERT INTO order_items (order_id, product_id, quantity, user_id) VALUES ($1, $2, $3, $4)',
         [id, product_id, quantity, userId],
@@ -1144,11 +1206,11 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
     // Recalculate the order's total value
     await client.query(
       `UPDATE orders SET order_value = (
-       SELECT COALESCE(SUM(p.price * oi.quantity), 0)
-       FROM order_items oi
-       JOIN products p ON oi.product_id = p.id
-       WHERE oi.order_id = $1
-     ) WHERE id = $1`,
+        SELECT COALESCE(SUM(p.price * oi.quantity), 0)
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1
+      ) WHERE id = $1`,
       [id],
     );
     console.log('Recalculated order value');
@@ -1158,21 +1220,21 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
     // Fetch and return the updated order details
     const orderFetchResult = await pool.query(
       `SELECT 
-       o.id AS order_id,
-       o.order_date,
-       o.order_value,
-       c.name AS customer_name,
-       c.id AS customer_id,
-       COALESCE(
-         '[' || STRING_AGG('{"product_id":' || p.id || ',"name":"' || p.name || '","price":' || p.price || ',"quantity":' || oi.quantity || '}', ',') || ']',
-         '[]'
-       ) AS products
-     FROM orders o
-     LEFT JOIN customers c ON o.customer_id = c.id
-     LEFT JOIN order_items oi ON o.id = oi.order_id
-     LEFT JOIN products p ON oi.product_id = p.id
-     WHERE o.id = $1 AND o.user_id = $2
-     GROUP BY o.id, c.name, c.id`,
+        o.id AS order_id,
+        o.order_date,
+        o.order_value,
+        c.name AS customer_name,
+        c.id AS customer_id,
+        COALESCE(
+          '[' || STRING_AGG('{"product_id":' || p.id || ',"name":"' || p.name || ',"price":' || p.price || ',"quantity":' || oi.quantity || '}', ',') || ']',
+          '[]'
+        ) AS products
+      FROM orders o
+      LEFT JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE o.id = $1 AND o.user_id = $2
+      GROUP BY o.id, c.name, c.id`,
       [id, userId],
     );
     console.log('Order updated successfully.');
@@ -1369,26 +1431,28 @@ app.put('/api/alerts/:id', requireUser, async (req, res) => {
   const userId = req.userId;
   const alertId = req.params.id;
   const { product_id, vendor_id, threshold_qty } = req.body;
-  
+
   if (!product_id || !threshold_qty) {
     return res
       .status(400)
       .json({ success: false, message: 'product_id & threshold_qty required' });
   }
-  
+
   try {
     const result = await pool.query(
       `UPDATE reorder_alerts 
        SET product_id = $1, vendor_id = $2, threshold_qty = $3
        WHERE id = $4 AND user_id = $5
        RETURNING *`,
-      [product_id, vendor_id, threshold_qty, alertId, userId]
+      [product_id, vendor_id, threshold_qty, alertId, userId],
     );
-    
+
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Alert not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: 'Alert not found' });
     }
-    
+
     res.json({ success: true, alert: result.rows[0] });
   } catch (err) {
     console.error('Error updating alert:', err);
