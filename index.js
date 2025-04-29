@@ -849,9 +849,9 @@ app.post('/api/orders', requireUser, async (req, res) => {
     // Pre-check stock for each order item
     for (const item of items) {
       const { product_id, quantity } = item;
-      const productResult = await pool.query(
-        'SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2',
-        [product_id, userId],
+      const productResult = await client.query(
+        'SELECT id, name, quantity, category_id FROM products WHERE id = $1 AND user_id = $2',
+        [product_id, userId]
       );
       if (productResult.rowCount === 0) {
         return res.status(404).json({
@@ -888,8 +888,10 @@ app.post('/api/orders', requireUser, async (req, res) => {
       // Deduct the quantity from product stock
       await client.query(
         'UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3',
-        [quantity, product_id, userId],
+        [quantity, product_id, userId]
       );
+
+      const newQty = product.quantity - quantity;
 
       // (inside the same transaction/client)
       if (newQty < product.threshold) {
@@ -900,6 +902,24 @@ app.post('/api/orders', requireUser, async (req, res) => {
         WHERE v.supply_category = $2`,
           [product.id, product.category_id],
         );
+      }
+
+      if (product.threshold && newQty < product.threshold) {
+        // Get vendors that supply this category
+        const vendorResult = await client.query(
+          `SELECT id FROM vendors WHERE supply_area = $1 AND user_id = $2`,
+          [product.category_id, userId]
+        );
+        
+        // Create alerts for each vendor
+        for (const vendor of vendorResult.rows) {
+          await client.query(
+            `INSERT INTO reorder_alerts (product_id, vendor_id, threshold_qty, user_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (product_id, vendor_id) DO NOTHING`,
+            [product_id, vendor.id, product.threshold, userId]
+          );
+        }
       }
 
       // Retrieve product name for logging
@@ -1010,6 +1030,9 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
         'UPDATE products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3',
         [item.quantity, item.product_id, userId],
       );
+
+      const newQty = product.quantity - quantity;
+
       // (inside the same transaction/client)
       if (newQty < product.threshold) {
         await client.query(
@@ -1019,6 +1042,24 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
         WHERE v.supply_category = $2`,
           [product.id, product.category_id],
         );
+      }
+
+      if (product.threshold && newQty < product.threshold) {
+        // Get vendors that supply this category
+        const vendorResult = await client.query(
+          `SELECT id FROM vendors WHERE supply_area = $1 AND user_id = $2`,
+          [product.category_id, userId]
+        );
+        
+        // Create alerts for each vendor
+        for (const vendor of vendorResult.rows) {
+          await client.query(
+            `INSERT INTO reorder_alerts (product_id, vendor_id, threshold_qty, user_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (product_id, vendor_id) DO NOTHING`,
+            [product_id, vendor.id, product.threshold, userId]
+          );
+        }
       }
 
       // Retrieve product name for logging
