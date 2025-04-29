@@ -12,13 +12,15 @@ const app = express();
 const PORT = process.env.PG_PORT || 5432;
 
 // Enable CORS and JSON parsing
-app.use(cors({
-  origin: 'https://beastboom.github.io',
-  methods: ['GET','POST','PUT','PATCH','DELETE'],
-  credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
+app.use(
+  cors({
+    origin: 'https://beastboom.github.io',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  }),
+);
 
 app.use(express.json());
 
@@ -164,18 +166,19 @@ async function initializeDatabase() {
     `);
     console.log('vendor_products link table is ready');
 
+    // In your initializeDatabase() function, change:
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS low_stock_alerts (
-        id SERIAL PRIMARY KEY,
-        product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-        vendor_id INT NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
-        threshold_qty INT NOT NULL,
-        last_sent TIMESTAMP NOT NULL DEFAULT NOW(),
-        attempts INT NOT NULL DEFAULT 1,
-        user_id INT NOT NULL
-      )
-    `);
-    console.log('Low_stock_alerts table is ready');
+  CREATE TABLE IF NOT EXISTS reorder_alerts (
+    id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    vendor_id INT NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+    threshold_qty INT NOT NULL,
+    last_notified TIMESTAMP DEFAULT NOW(),
+    attempts INT NOT NULL DEFAULT 1,
+    user_id INT NOT NULL
+  )
+`);
+    console.log('Reorder_alerts table is ready');
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -1296,23 +1299,28 @@ app.post('/api/alerts', requireUser, async (req, res) => {
 // Fetch all reorder alerts for this user
 app.get('/api/alerts', requireUser, async (req, res) => {
   const userId = req.userId;
-  const result = await pool.query(
-    `SELECT
-       ra.id,
-       ra.threshold_qty,
-       ra.last_notified,
-       p.id   AS product_id,
-       p.name AS product_name,
-       v.id   AS vendor_id,
-       v.name AS vendor_name
-     FROM reorder_alerts ra
-     JOIN products p ON ra.product_id = p.id
-     JOIN vendors  v ON ra.vendor_id  = v.id
-     WHERE ra.user_id = $1
-     ORDER BY ra.id`,
-    [userId],
-  );
-  res.json({ alerts: result.rows });
+  try {
+    const result = await pool.query(
+      `SELECT
+         ra.id,
+         ra.threshold_qty,
+         ra.last_notified,
+         p.id   AS product_id,
+         p.name AS product_name,
+         v.id   AS vendor_id,
+         v.name AS vendor_name
+       FROM reorder_alerts ra
+       JOIN products p ON ra.product_id = p.id
+       JOIN vendors  v ON ra.vendor_id  = v.id
+       WHERE ra.user_id = $1
+       ORDER BY ra.id`,
+      [userId],
+    );
+    res.json({ alerts: result.rows });
+  } catch (err) {
+    console.error('Error fetching alerts:', err);
+    res.status(500).json({ success: false, message: 'Error fetching alerts' });
+  }
 });
 
 app.delete('/api/alerts/:id', requireUser, async (req, res) => {
@@ -1329,24 +1337,27 @@ app.listen(PORT, () => {
 });
 
 // Every 10 minutes, process pending alerts:
-setInterval(async () => {
-  const { rows } = await pool.query(`
+setInterval(
+  async () => {
+    const { rows } = await pool.query(`
     SELECT ra.id, p.name AS product_name, v.email AS vendor_email
       FROM reorder_alerts ra
       JOIN products p ON p.id = ra.product_id
       JOIN vendors  v ON v.id = ra.vendor_id
   `);
-  for (let { id, product_name, vendor_email } of rows) {
-    try {
-      await sendEmail(
-        vendor_email,
-        `Reorder Request: ${product_name}`,
-        `Our stock of "${product_name}" is below its reorder threshold. Please send us your quotation.`
-      );
-      await pool.query(`DELETE FROM reorder_alerts WHERE id = $1`, [id]);
-    } catch (err) {
-      console.error(`Failed to email alert ${id}:`, err);
-      // leave it in the table to retry next interval
+    for (let { id, product_name, vendor_email } of rows) {
+      try {
+        await sendEmail(
+          vendor_email,
+          `Reorder Request: ${product_name}`,
+          `Our stock of "${product_name}" is below its reorder threshold. Please send us your quotation.`,
+        );
+        await pool.query(`DELETE FROM reorder_alerts WHERE id = $1`, [id]);
+      } catch (err) {
+        console.error(`Failed to email alert ${id}:`, err);
+        // leave it in the table to retry next interval
+      }
     }
-  }
-}, 10 * 60 * 1000);
+  },
+  10 * 60 * 1000,
+);
