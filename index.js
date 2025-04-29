@@ -147,6 +147,28 @@ async function initializeDatabase() {
       )
     `);
     console.log('Email_verifications table is ready');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS vendor_products (
+        vendor_id  INT NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        PRIMARY KEY (vendor_id, product_id)
+      )
+    `);
+    console.log('vendor_products link table is ready');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS low_stock_alerts (
+        id SERIAL PRIMARY KEY,
+        product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        vendor_id INT NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        threshold_qty INT NOT NULL,
+        last_sent TIMESTAMP NOT NULL DEFAULT NOW(),
+        attempts INT NOT NULL DEFAULT 1,
+        user_id INT NOT NULL
+      )
+    `);
+    console.log('Low_stock_alerts table is ready');
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -186,16 +208,22 @@ app.post('/api/signup', async (req, res) => {
   const { username, email, password } = req.body;
   // 1) presence check
   if (!username || !email || !password) {
-    return res.status(400).json({ success: false, message: 'Username, email & password are required.' });
+    return res.status(400).json({
+      success: false,
+      message: 'Username, email & password are required.',
+    });
   }
   // 2) format checks
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ success: false, message: 'Invalid email format.' });
+    return res
+      .status(400)
+      .json({ success: false, message: 'Invalid email format.' });
   }
   if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password)) {
     return res.status(400).json({
       success: false,
-      message: 'Password must be 8+ chars with uppercase, lowercase, number & special.'
+      message:
+        'Password must be 8+ chars with uppercase, lowercase, number & special.',
     });
   }
 
@@ -212,7 +240,7 @@ app.post('/api/signup', async (req, res) => {
          (username, email, password_hash, code, expires_at)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [username, email, password_hash, code, expires_at]
+      [username, email, password_hash, code, expires_at],
     );
     const verificationId = ev.rows[0].id;
 
@@ -223,7 +251,7 @@ app.post('/api/signup', async (req, res) => {
     res.json({
       success: true,
       message: 'Verification code sent.',
-      verificationId
+      verificationId,
     });
   } catch (err) {
     console.error('❌ /api/signup error:', err);
@@ -231,15 +259,15 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-
-
 // Resend verification code (max 3 / 30min)
 app.post('/api/resend-code', async (req, res) => {
   const { verificationId } = req.body;
 
   // Validate input
   if (!verificationId) {
-    return res.status(400).json({ success: false, message: 'Verification ID is required.' });
+    return res
+      .status(400)
+      .json({ success: false, message: 'Verification ID is required.' });
   }
 
   try {
@@ -248,11 +276,13 @@ app.post('/api/resend-code', async (req, res) => {
       `SELECT attempts, last_requested, email 
        FROM email_verifications 
        WHERE id = $1`,
-      [verificationId]
+      [verificationId],
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Verification record not found.' });
+      return res
+        .status(404)
+        .json({ success: false, message: 'Verification record not found.' });
     }
 
     let { attempts, last_requested, email } = result.rows[0];
@@ -265,7 +295,10 @@ app.post('/api/resend-code', async (req, res) => {
 
     // Check resend limit
     if (attempts >= 3) {
-      return res.status(429).json({ success: false, message: 'Resend limit reached. Please wait 30 minutes.' });
+      return res.status(429).json({
+        success: false,
+        message: 'Resend limit reached. Please wait 30 minutes.',
+      });
     }
 
     // Generate new 6-digit code and set expiration (1 hour from now)
@@ -277,13 +310,17 @@ app.post('/api/resend-code', async (req, res) => {
       `UPDATE email_verifications 
        SET code = $1, expires_at = $2, attempts = $3, last_requested = $4 
        WHERE id = $5`,
-      [newCode, expiresAt, attempts + 1, now, verificationId]
+      [newCode, expiresAt, attempts + 1, now, verificationId],
     );
 
     // Send the new code via email
     await sendEmail(email, `Your new verification code is: ${newCode}`);
 
-    res.json({ success: true, message: 'A new code has been sent.', attempts: attempts + 1 });
+    res.json({
+      success: true,
+      message: 'A new code has been sent.',
+      attempts: attempts + 1,
+    });
   } catch (err) {
     console.error('Error resending code:', err);
     res.status(500).json({ success: false, message: 'Error resending code.' });
@@ -296,10 +333,15 @@ app.post('/api/verify-code', async (req, res) => {
 
   // Validate input
   if (!verificationId || !code) {
-    return res.status(400).json({ success: false, message: 'Verification ID and code are required.' });
+    return res.status(400).json({
+      success: false,
+      message: 'Verification ID and code are required.',
+    });
   }
   if (isNaN(parseInt(verificationId))) {
-    return res.status(400).json({ success: false, message: 'Invalid verification ID.' });
+    return res
+      .status(400)
+      .json({ success: false, message: 'Invalid verification ID.' });
   }
 
   console.log('Received verify-code request:', { verificationId, code }); // Debugging log
@@ -308,10 +350,12 @@ app.post('/api/verify-code', async (req, res) => {
     // A) fetch the pending row
     const { rows } = await pool.query(
       'SELECT username, email, password_hash, expires_at FROM email_verifications WHERE id = $1 AND code = $2',
-      [parseInt(verificationId), code]
+      [parseInt(verificationId), code],
     );
     if (!rows.length || new Date(rows[0].expires_at) < new Date()) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired code.' });
+      return res
+        .status(400)
+        .json({ success: false, message: 'Invalid or expired code.' });
     }
     const { username, email, password_hash } = rows[0];
 
@@ -319,14 +363,13 @@ app.post('/api/verify-code', async (req, res) => {
     await pool.query(
       `INSERT INTO users (username, email, password)
          VALUES ($1, $2, $3)`,
-      [username, email, password_hash]
+      [username, email, password_hash],
     );
 
     // C) remove the pending row
-    await pool.query(
-      `DELETE FROM email_verifications WHERE id = $1`,
-      [parseInt(verificationId)]
-    );
+    await pool.query(`DELETE FROM email_verifications WHERE id = $1`, [
+      parseInt(verificationId),
+    ]);
 
     res.json({ success: true, message: 'Email verified and account created.' });
   } catch (err) {
@@ -334,7 +377,6 @@ app.post('/api/verify-code', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
 
 // Login Endpoint
 app.post('/api/login', async (req, res) => {
@@ -838,6 +880,18 @@ app.post('/api/orders', requireUser, async (req, res) => {
         'UPDATE products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3',
         [quantity, product_id, userId],
       );
+
+      // (inside the same transaction/client)
+      if (newQty < product.threshold) {
+        await client.query(
+          `INSERT INTO reorder_alerts (product_id, vendor_id)
+       SELECT $1, v.id
+         FROM vendors v
+        WHERE v.supply_category = $2`,
+          [product.id, product.category_id],
+        );
+      }
+
       // Retrieve product name for logging
       const prodResult = await client.query(
         'SELECT name FROM products WHERE id = $1 AND user_id = $2',
@@ -946,6 +1000,17 @@ app.put('/api/orders/:id', requireUser, async (req, res) => {
         'UPDATE products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3',
         [item.quantity, item.product_id, userId],
       );
+      // (inside the same transaction/client)
+      if (newQty < product.threshold) {
+        await client.query(
+          `INSERT INTO reorder_alerts (product_id, vendor_id)
+       SELECT $1, v.id
+         FROM vendors v
+        WHERE v.supply_category = $2`,
+          [product.id, product.category_id],
+        );
+      }
+
       // Retrieve product name for logging
       const prodRes = await client.query(
         'SELECT name FROM products WHERE id = $1 AND user_id = $2',
@@ -1197,6 +1262,84 @@ app.post('/api/verify-email', async (req, res) => {
   res.json({ success: true, message: 'Email verified.' });
 });
 
+// Create or update a reorder alert
+app.post('/api/alerts', requireUser, async (req, res) => {
+  const userId = req.userId;
+  const { product_id, vendor_id, threshold_qty } = req.body;
+  if (!product_id || !threshold_qty) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'product_id & threshold_qty required' });
+  }
+  try {
+    await pool.query(
+      `INSERT INTO reorder_alerts
+         (product_id, vendor_id, threshold_qty, user_id)
+       VALUES
+         ($1, $2, $3, $4)`,
+      [product_id, vendor_id, threshold_qty, userId],
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error upserting alert:', err);
+    res.status(500).json({ success: false, message: 'Could not save alert' });
+  }
+});
+
+// Fetch all reorder alerts for this user
+app.get('/api/alerts', requireUser, async (req, res) => {
+  const userId = req.userId;
+  const result = await pool.query(
+    `SELECT
+       ra.id,
+       ra.threshold_qty,
+       ra.last_notified,
+       p.id   AS product_id,
+       p.name AS product_name,
+       v.id   AS vendor_id,
+       v.name AS vendor_name
+     FROM reorder_alerts ra
+     JOIN products p ON ra.product_id = p.id
+     JOIN vendors  v ON ra.vendor_id  = v.id
+     WHERE ra.user_id = $1
+     ORDER BY ra.id`,
+    [userId],
+  );
+  res.json({ alerts: result.rows });
+});
+
+app.delete('/api/alerts/:id', requireUser, async (req, res) => {
+  await pool.query(
+    `DELETE FROM reorder_alerts
+     WHERE id = $1 AND user_id = $2`,
+    [req.params.id, req.userId],
+  );
+  res.json({ success: true });
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Every 10 minutes, process pending alerts:
+setInterval(async () => {
+  const { rows } = await pool.query(`
+    SELECT ra.id, p.name AS product_name, v.email AS vendor_email
+      FROM reorder_alerts ra
+      JOIN products p ON p.id = ra.product_id
+      JOIN vendors  v ON v.id = ra.vendor_id
+  `);
+  for (let { id, product_name, vendor_email } of rows) {
+    try {
+      await sendEmail(
+        vendor_email,
+        `Reorder Request: ${product_name}`,
+        `Our stock of "${product_name}" is below its reorder threshold. Please send us your quotation.`
+      );
+      await pool.query(`DELETE FROM reorder_alerts WHERE id = $1`, [id]);
+    } catch (err) {
+      console.error(`Failed to email alert ${id}:`, err);
+      // leave it in the table to retry next interval
+    }
+  }
+}, 10 * 60 * 1000);
