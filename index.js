@@ -850,7 +850,7 @@ app.post('/api/orders', requireUser, async (req, res) => {
     for (const item of items) {
       const { product_id, quantity } = item;
       const productResult = await client.query(
-        'SELECT id, name, quantity, category_id FROM products WHERE id = $1 AND user_id = $2',
+        'SELECT name, quantity FROM products WHERE id = $1 AND user_id = $2',
         [product_id, userId]
       );
       if (productResult.rowCount === 0) {
