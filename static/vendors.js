@@ -1,13 +1,24 @@
 // ------------------------------
 // Global UI Toggles (Sidebar & Theme)
 // ------------------------------
+
 const sidebar = document.getElementById('sidebar');
 const menuToggle = document.getElementById('menu-toggle');
+const logoImg = document.getElementById("logo-img");
 const mainContent = document.getElementById('main-content');
+
 
 menuToggle.addEventListener('click', () => {
   sidebar.classList.toggle('expanded');
   mainContent.classList.toggle('expanded');
+
+  if (sidebar.classList.contains("expanded")) {
+    logoImg.src = "../images/logo.png"; // full logo
+    logoImg.alt = "Logo (expanded)";
+  } else {
+    logoImg.src = "../images/logo-short.png"; // collapsed logo
+    logoImg.alt = "Logo (collapsed)";
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {

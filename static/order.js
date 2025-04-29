@@ -3,11 +3,20 @@
 // ------------------------------
 const sidebar = document.getElementById('sidebar');
 const menuToggle = document.getElementById('menu-toggle');
+const logoImg = document.getElementById("logo-img");
 const mainContent = document.getElementById('main-content');
 
 menuToggle.addEventListener('click', () => {
   sidebar.classList.toggle('expanded');
   mainContent.classList.toggle('expanded');
+
+  if (sidebar.classList.contains("expanded")) {
+    logoImg.src = "../images/logo.png"; // full logo
+    logoImg.alt = "Logo (expanded)";
+  } else {
+    logoImg.src = "../images/logo-short.png"; // collapsed logo
+    logoImg.alt = "Logo (collapsed)";
+  }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -384,21 +393,27 @@ document.getElementById("orderForm").addEventListener("submit", function (e) {
       },
       body: JSON.stringify(orderData)
     })
-      .then(response => {
-        if (!response.ok) {
-          return response.json().then(data => { throw new Error(data.message || "Order creation failed"); });
-        }
-        return response.json();
-      })
-      .then(data => {
-        alert("Order placed successfully!");
-        closeOrderModal();
-        fetchOrders();
-      })
-      .catch(err => {
-        console.error("Error placing order:", err);
-        alert("Error placing order: " + err.message);
-      });
+    .then(async response => {
+      if (!response.ok) {
+        // grab full response text to see server error
+        const body = await response.text();
+        console.error("🛑 Order creation failed, server said:", body);
+        // try to extract JSON message, otherwise show status
+        let msg = `Status ${response.status}`;
+        try { msg = JSON.parse(body).message; } catch {}
+        throw new Error(msg);
+      }
+      return response.json();
+    })
+    .then(data => {
+      alert("Order placed successfully!");
+      closeOrderModal();
+      fetchOrders();
+    })
+    .catch(err => {
+      console.error("Error placing order:", err);
+      alert("Error placing order: " + err.message);
+    });
   }
 });
 

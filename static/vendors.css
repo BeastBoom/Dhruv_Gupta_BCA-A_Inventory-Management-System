@@ -168,12 +168,7 @@ body {
 }
 
 /* Sidebar Styles */
-#logo-image {
-  height: 65px;
-  display: block;
-  margin: 10px auto;
-}
-
+/* Sidebar base */
 .sidebar {
   width: 63px;
   height: 100vh;
@@ -189,6 +184,14 @@ body {
 
 .sidebar.expanded {
   width: 200px;
+}
+
+/* Logo sizing and spacing */
+.sidebar-logo img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
 }
 
 .sidebar-logo {

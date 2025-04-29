@@ -59,9 +59,7 @@ function openCustomerEditModal(button) {
   
   // Get full phone number from the table cell
   const fullNumber = cells[1].textContent.trim();
-  // Default: assume numbers stored in the table include country code,
-  // e.g., "+911234567890". Split into country code and local part.
-  let countryCode = "+91"; // Default country code if not found
+  let countryCode = "+91"; 
   let localNumber = fullNumber;
   if (fullNumber.startsWith("+91")) {
     countryCode = "+91";
@@ -99,13 +97,15 @@ async function deleteCustomer(customerId) {
   }
 }
 
-document.getElementById("customerForm").addEventListener("submit", function(e) {
+document.getElementById("customerForm").addEventListener("submit", async function(e) {
   e.preventDefault();
 
   const name = document.getElementById("customerName").value;
   const customerNumber = document.getElementById('customerNumber').value;
   const email = document.getElementById("customerEmail").value;
   const customerData = { customer_number: customerNumber, name, email };
+
+  
 
   // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -127,6 +127,25 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
       return;
     }
   
+    if (email) {
+      try {
+        const validationResponse = await fetch("https://inventory-management-system-xtb4.onrender.com/api/validate-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const validationData = await validationResponse.json();
+        if (!validationData.success || !validationData.valid) {
+          alert("The provided email address appears to be invalid.");
+          return;
+        }
+      } catch (err) {
+        console.error("Error during email validation:", err);
+        alert("Email validation failed.");
+        return;
+      }
+    }
+
   if (editingCustomer) {
     fetch(`https://inventory-management-system-xtb4.onrender.com/api/customers/${editingCustomer.getAttribute('data-id')}`, {
       method: 'PUT',

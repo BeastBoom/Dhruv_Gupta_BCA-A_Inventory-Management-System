@@ -4,15 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Inventory Management</title>
-    <link rel="stylesheet" href="./page.css" />
+    <link rel="stylesheet" href="static/page.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     />
+    <!-- Added preload for critical resources -->
+    <link rel="preload" href="images/teamback.png" as="image" />
+    <link rel="preload" href="images/serviceback.png" as="image" />
+    <link rel="preload" href="images/back.jpg" as="image" />
   </head>
   <body>
-    <header>
+    <header id="home">
       <div class="logo"><img src="./images/logo.png" alt="logo" class="logo2"></div>
+      <!-- Enhanced mobile menu button with aria-label for accessibility -->
+      <div class="mobile-menu-btn" aria-label="Toggle menu" role="button" tabindex="0">
+        <i class="fas fa-bars"></i>
+      </div>
       <nav class="logo-in">
         <a href="#home">Home</a>
         <a href="#app">App</a>
@@ -42,216 +50,258 @@
         </div>
       </div>
     </section>
-    <section class="services-section">
-      <h2>Our Services</h2>
-      <p>
-        Tailored Solutions for Your Success. Elevate Your Experience with Our
-        Exceptional and Comprehensive Services Today.
-      </p>
-      <div class="services-container">
-        <div class="service-card">
-            <div><img src="./images/inventorytracking.png" alt="" class ="service-icon"></div>
-            <h3>Inventory Tracking</h3>
-            <p>
-                Keep track of stock levels in real-time to avoid shortages and overstocking.
-            </p>
+
+    <section class="services-section" id="app">
+      <div class="section-container">
+        <h2>Our Services</h2>
+        <p>
+          Tailored Solutions for Your Success. Elevate Your Experience with Our
+          Exceptional and Comprehensive Services Today.
+        </p>
+        <div class="services-container">
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/inventorytracking.png" alt="Inventory Tracking" class="service-icon"></div>
+              <h3>Inventory Tracking</h3>
+              <p>
+                  Keep track of stock levels in real-time to avoid shortages and overstocking.
+              </p>
+          </div>
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/order_management.png" alt="Order Management" class="service-icon"></div>
+              <h3>Order Management</h3>
+              <p>
+                  Efficiently manage incoming and outgoing orders to streamline operations.
+              </p>
+          </div>
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/stockalert.png" alt="Stock Alerts" class="service-icon"></div>
+              <h3>Stock Alerts</h3>
+              <p>
+                  Get notified when inventory reaches critical levels to prevent stockouts.
+              </p>
+          </div>
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/supplier_management.png" alt="Supplier Management" class="service-icon"></div>
+              <h3>Supplier Management</h3>
+              <p>
+                Manage suppliers and track deliveries for a smooth supply chain.
+              </p>
+          </div>
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/STOCKlogo.png" alt="Inventory Reports" class="service-icon"></div>
+              <h3>Inventory Reports</h3>
+              <p>
+                  Generate detailed reports for better insights into stock movement and trends.
+              </p>
+          </div>
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/analytics.png" alt="Data Analytics" class="service-icon"></div>
+              <h3>Data Analytics</h3>
+              <p>
+                  Analyze inventory data to identify patterns and optimize stock levels.
+              </p>
+          </div>
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/purchase.png" alt="Purchase Management" class="service-icon"></div>
+              <h3>Purchase Management</h3>
+              <p>
+                  Automate purchase orders and restocking to ensure consistent supply.
+              </p>
+          </div>
+          <div class="service-card">
+              <div class="service-icon-container"><img src="./images/demand_forecasting.png" alt="Demand Forecasting" class="service-icon"></div>
+              <h3>Demand Forecasting</h3>
+              <p>
+                  Use predictive analytics to anticipate future inventory needs.
+              </p>
+          </div>
         </div>
-        <div class="service-card">
-            <div><img src="./images/order_management.png" alt="" class ="service-icon"></div>
-            <h3>Order Management</h3>
-            <p>
-                Efficiently manage incoming and outgoing orders to streamline operations.
-            </p>
-        </div>
-        <div class="service-card">
-            <div><img src="./images/stockalert.png" alt="" class ="service-icon"></div>
-            <h3>Stock Alerts</h3>
-            <p>
-                Get notified when inventory reaches critical levels to prevent stockouts.
-            </p>
-        </div>
-        <div class="service-card">
-            <div><img src="./images/supplier_management.png" alt="" class ="service-icon"></div>
-            <h3>Supplier Management</h3>
-            <p>
-              Manage suppliers and track deliveries for a smooth supply chain.
-            </p>
-        </div>
-        <div class="service-card">
-            <div><img src="./images/STOCKlogo.png" alt="" class ="service-icon"></div>
-            <h3>Inventory Reports</h3>
-            <p>
-                Generate detailed reports for better insights into stock movement and trends.
-            </p>
-        </div>
-        <div class="service-card">
-            <div><img src="./images/analytics.png" alt="" class ="service-icon"></div>
-            <h3>Data Analytics</h3>
-            <p>
-                Analyze inventory data to identify patterns and optimize stock levels.
-            </p>
-        </div>
-        <div class="service-card">
-            <div><img src="./images/purchase.png" alt="" class ="service-icon"></div>
-            <h3>Purchase Management</h3>
-            <p>
-                Automate purchase orders and restocking to ensure consistent supply.
-            </p>
-        </div>
-        <div class="service-card">
-            <div><img src="./images/demand_forecasting.png" alt="" class ="service-icon"></div>
-            <h3>Demand Forecasting</h3>
-            <p>
-                Use predictive analytics to anticipate future inventory needs.
-            </p>
-        </div>
-    </div>
+      </div>
+    </section>
     
-    </section>
-    <section class="team-section">
-      <h2>Our Team</h2>
-      <p>Meet the minds behind our success.</p>
-      <div class="team-list">
-        <div class="team-item">
-          <img src="./images/kshitij.jpg" alt="Kshitij Marwah" />
-          <h3>Kshitij Marwah</h3>
-          <p>Frontend</p>
-        </div>
-        <div class="team-item">
-          <img src="./images/dhruv.jpg" alt="dhruv Gupta" />
-          <h3>Dhruv Gupta</h3>
-          <p>Backend</p>
-        </div>
-        <div class="team-item">
-          <img src="./images/mehul.jpg" alt="Mehul Srivastava" />
-          <h3>Mehul Srivastava</h3>
-          <p>Designing</p>
+    <section class="team-section" id="about">
+      <div class="team-overlay"></div>
+      <div class="section-container">
+        <h2>Our Team</h2>
+        <p class="team-intro">Meet the minds behind our success.</p>
+        <div class="team-list">
+          <div class="team-item">
+            <div class="team-item-inner">
+              <div class="team-image-container">
+                <img src="./images/kshitij.jpg" alt="Kshitij Marwah" />
+              </div>
+              <h3>Kshitij Marwah</h3>
+              <p>Frontend</p>
+              <div class="team-social">
+                <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a href="#" aria-label="Email"><i class="fas fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
+          <div class="team-item">
+            <div class="team-item-inner">
+              <div class="team-image-container">
+                <img src="./images/dhruv.jpg" alt="dhruv Gupta" />
+              </div>
+              <h3>Dhruv Gupta</h3>
+              <p>Backend</p>
+              <div class="team-social">
+                <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a href="#" aria-label="Email"><i class="fas fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
+          <div class="team-item">
+            <div class="team-item-inner">
+              <div class="team-image-container">
+                <img src="./images/mehul.jpg" alt="Mehul Srivastava" />
+              </div>
+              <h3>Mehul Srivastava</h3>
+              <p>Designing</p>
+              <div class="team-social">
+                <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a href="#" aria-label="Email"><i class="fas fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
-    <section class="reviews-section">
-      <h2>Reviews related to <span>Inventory Management</span></h2>
+    
+    <section class="reviews-section" id="pricing">
+      <div class="section-container">
+        <h2>Reviews related to <span>Inventory Management</span></h2>
 
-      <div class="carousel-wrapper">
-        <button class="carousel-btn left-btn">&#10094;</button>
+        <div class="carousel-wrapper">
+          <button class="carousel-btn left-btn" aria-label="Previous reviews">&#10094;</button>
 
-        <div class="reviews-container">
-          <!-- Review Cards -->
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★★</div>
-            <h3>Game-changer for our business!</h3>
-            <p>
-              This inventory management system saved us hours of manual work!
-              Tracking stock levels has never been easier.
-            </p>
-            <h4 class="reviewer">Aarav.</h4>
+          <div class="reviews-container">
+            <!-- Review Cards -->
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★★</div>
+              <h3>Game-changer for our business!</h3>
+              <p>
+                This inventory management system saved us hours of manual work!
+                Tracking stock levels has never been easier.
+              </p>
+              <h4 class="reviewer">Aarav.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★☆</div>
+              <h3>Real-time updates are amazing</h3>
+              <p>
+                The real-time updates and automated reports have made managing
+                stock effortless. Highly recommend!
+              </p>
+              <h4 class="reviewer">Vihaan.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★☆</div>
+              <h3>Increased efficiency</h3>
+              <p>
+                Managing inventory across multiple locations is now seamless.
+                We've reduced waste significantly.
+              </p>
+              <h4 class="reviewer">Ananya.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★☆☆</div>
+              <h3>User-friendly and powerful</h3>
+              <p>
+                The user interface is intuitive and easy to navigate. Our team
+                adapted quickly.
+              </p>
+              <h4 class="reviewer">Rohan.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★★</div>
+              <h3>Stock alerts are a lifesaver</h3>
+              <p>
+                Stock alerts and order automation have reduced wastage and helped
+                us maintain consistent stock levels.
+              </p>
+              <h4 class="reviewer">Priya.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★★</div>
+              <h3>Seamless integration</h3>
+              <p>
+                The integration with our POS system is flawless. Inventory updates
+                in real-time without any lag.
+              </p>
+              <h4 class="reviewer">Kabir.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★☆</div>
+              <h3>Best investment for our warehouse</h3>
+              <p>
+                Our warehouse operations have become more efficient and better
+                organized since we implemented this system.
+              </p>
+              <h4 class="reviewer">Sanya.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★★</div>
+              <h3>Accurate tracking</h3>
+              <p>
+                The system provides precise tracking of inventory. No more
+                overstock or shortages!
+              </p>
+              <h4 class="reviewer">Arjun.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★★☆</div>
+              <h3>Great customer support</h3>
+              <p>
+                Customer support has been extremely responsive and helpful
+                whenever we've had questions.
+              </p>
+              <h4 class="reviewer">Meera.</h4>
+            </div>
+
+            <div class="review-card">
+              <p class="category">Inventory Management</p>
+              <div class="stars">★★★☆☆</div>
+              <h3>Improved order fulfillment</h3>
+              <p>
+                Faster and more accurate order fulfillment has improved customer
+                satisfaction dramatically.
+              </p>
+              <h4 class="reviewer">Kartik.</h4>
+            </div>
           </div>
 
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★☆</div>
-            <h3>Real-time updates are amazing</h3>
-            <p>
-              The real-time updates and automated reports have made managing
-              stock effortless. Highly recommend!
-            </p>
-            <h4 class="reviewer">Vihaan.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★☆</div>
-            <h3>Increased efficiency</h3>
-            <p>
-              Managing inventory across multiple locations is now seamless.
-              We've reduced waste significantly.
-            </p>
-            <h4 class="reviewer">Ananya.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★☆☆</div>
-            <h3>User-friendly and powerful</h3>
-            <p>
-              The user interface is intuitive and easy to navigate. Our team
-              adapted quickly.
-            </p>
-            <h4 class="reviewer">Rohan.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★★</div>
-            <h3>Stock alerts are a lifesaver</h3>
-            <p>
-              Stock alerts and order automation have reduced wastage and helped
-              us maintain consistent stock levels.
-            </p>
-            <h4 class="reviewer">Priya.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★★</div>
-            <h3>Seamless integration</h3>
-            <p>
-              The integration with our POS system is flawless. Inventory updates
-              in real-time without any lag.
-            </p>
-            <h4 class="reviewer">Kabir.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★☆</div>
-            <h3>Best investment for our warehouse</h3>
-            <p>
-              Our warehouse operations have become more efficient and better
-              organized since we implemented this system.
-            </p>
-            <h4 class="reviewer">Sanya.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★★</div>
-            <h3>Accurate tracking</h3>
-            <p>
-              The system provides precise tracking of inventory. No more
-              overstock or shortages!
-            </p>
-            <h4 class="reviewer">Arjun.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★★☆</div>
-            <h3>Great customer support</h3>
-            <p>
-              Customer support has been extremely responsive and helpful
-              whenever we've had questions.
-            </p>
-            <h4 class="reviewer">Meera.</h4>
-          </div>
-
-          <div class="review-card">
-            <p class="category">Inventory Management</p>
-            <div class="stars">★★★☆☆</div>
-            <h3>Improved order fulfillment</h3>
-            <p>
-              Faster and more accurate order fulfillment has improved customer
-              satisfaction dramatically.
-            </p>
-            <h4 class="reviewer">Kartik.</h4>
+          <button class="carousel-btn right-btn" aria-label="Next reviews">&#10095;</button>
+          
+          <!-- Added progress indicator -->
+          <div class="carousel-progress">
+            <div class="progress-bar"></div>
           </div>
         </div>
-
-        <button class="carousel-btn right-btn">&#10095;</button>
       </div>
     </section>
-    <footer class="footer">
+    
+    <footer class="footer" id="contact">
       <div class="footer-container">
         <div class="footer-section">
           <h3>About Us</h3>
@@ -264,28 +314,40 @@
         <div class="footer-section">
           <h3>Quick Links</h3>
           <ul>
-            <li><a href="#">Home</a></li>
-            <li><a href="#">Features</a></li>
-            <li><a href="#">Pricing</a></li>
-            <li><a href="#">Contact</a></li>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#app">Features</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#contact">Contact</a></li>
           </ul>
         </div>
 
         <div class="footer-section">
           <h3>Follow Us</h3>
           <div class="social-icons">
-            <a href="#"><i class="fa-brands fa-facebook"></i></a>
-            <a href="#"><i class="fa-brands fa-whatsapp"></i></a>
-            <a href="#"><i class="fa-brands fa-instagram"></i></a>
-            <a href="#"><i class="fa-brands fa-linkedin"></i></a>
+            <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+            <a href="#" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
           </div>
+        </div>
+
+        <div class="footer-section">
+          <h3>Contact Us</h3>
+          <p><i class="fas fa-map-marker-alt"></i> K.R. Mangalam University</p>
+          <p><i class="fas fa-phone"></i> +91 8448115145</p>
+          <p><i class="fas fa-envelope"></i> stockez.in@gmail.com</p>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <p>&copy; 2025 Journey Go. All rights reserved.</p>
+        <p>&copy; 2025 StockEz. All rights reserved.</p>
       </div>
     </footer>
+
+    <!-- Back to top button -->
+    <button id="back-to-top" aria-label="Back to top">
+      <i class="fas fa-arrow-up"></i>
+    </button>
 
     <script src="script.js"></script>
   </body>

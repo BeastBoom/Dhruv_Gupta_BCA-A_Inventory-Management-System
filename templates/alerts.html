@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Category Management</title>
-  <link rel="stylesheet" href="../static/categories.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reorder Alerts</title>
+  <link rel="stylesheet" href="../static/alerts.css">
 </head>
 <body>
-  <!-- Sidebar -->
+  <!-- Sidebar (add the Alerts link) -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-logo" id="logo-screen">
       <img src="../images/logo-short.png" alt="Logo" id="logo-img">
@@ -27,55 +27,63 @@
   <!-- Main Content -->
   <div class="main-content" id="main-content">
     <header>
-      <h1>Category Management</h1>
+      <h1>Reorder Alerts</h1>
       <button id="theme-toggle">🌙</button>
     </header>
-    <section class="category-management">
+
+    <section class="alerts-management">
       <div class="header-actions">
-        <button class="btn btn-add" onclick="openCategoryModal()">+ Add Category</button>
+        <button class="btn btn-add" onclick="openAlertModal()">+ Add Alert</button>
       </div>
       <div class="table-container">
-        <table class="category-table">
+        <table class="alerts-table">
           <thead>
             <tr>
-              <th>Category Name</th>
-              <th>Description</th>
-              <th>Products</th>
+              <th>Product</th>
+              <th>Vendor</th>
+              <th>Threshold Qty</th>
+              <th>Last Notified</th>
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="categoryTableBody"></tbody>
+          <tbody id="alertsTableBody">
+            <!-- rows inserted by JS -->
+          </tbody>
         </table>
       </div>
     </section>
-    
-    <!-- Category Modal -->
-    <div id="categoryModal" class="modal">
+
+    <!-- Add/Edit Alert Modal -->
+    <div id="alertModal" class="modal">
       <div class="modal-content">
-        <span class="close" onclick="closeCategoryModal()">&times;</span>
-        <h2 id="categoryModalTitle">Add New Category</h2>
-        <form id="categoryForm">
+        <span class="close" onclick="closeAlertModal()">&times;</span>
+        <h2 id="alertModalTitle">Add Alert</h2>
+        <form id="alertForm">
           <div class="form-group">
-            <label for="categoryName">Category Name:</label>
-            <input type="text" id="categoryName" name="categoryName" required>
+            <label for="alertProductSelect">Product:</label>
+            <select id="alertProductSelect" required>
+              <option value="">Select Product</option>
+            </select>
           </div>
           <div class="form-group">
-            <label for="categoryDescription">Description:</label>
-            <textarea id="categoryDescription" name="categoryDescription" required></textarea>
-          </div>
+            <label for="alertVendorSelect">Vendor:</label>
+            <select id="alertVendorSelect" required>
+              <option value="">Select Vendor</option>
+            </select>
+          </div>          
           <div class="form-group">
-            <label for="categoryProducts">Products (comma-separated IDs):</label>
-            <input type="text" id="categoryProducts" name="categoryProducts">
+            <label for="alertThreshold">Threshold Quantity:</label>
+            <input type="number" id="alertThreshold" min="1" required>
           </div>
           <div class="form-actions">
-            <button type="button" class="btn btn-cancel" onclick="closeCategoryModal()">Cancel</button>
-            <button type="submit" class="btn btn-save">Save Category</button>
+            <button type="button" class="btn btn-cancel" onclick="closeAlertModal()">Cancel</button>
+            <button type="submit" class="btn btn-save">Save</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <script src="../static/categories.js"></script>
+  <script src="../static/alerts.js"></script>
 </body>
 </html>

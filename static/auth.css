@@ -41,8 +41,8 @@ a {
 
 button {
   border-radius: 20px;
-  border: 1px solid #ff4b2b;
-  background-color: #ff4b2b;
+  border: 1px solid #8E54E9;
+  background-color: #8E54E9;
   color: #ffffff;
   font-size: 12px;
   font-weight: bold;
@@ -65,6 +65,10 @@ button.ghost {
   border-color: #ffffff;
 }
 
+button.ghost:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 form {
   background-color: #ffffff;
   display: flex;
@@ -77,7 +81,7 @@ form {
 }
 
 input {
-  background-color: #eee;
+  background-color: #f5f5f5;
   border: none;
   padding: 12px 15px;
   margin: 8px 0;
@@ -178,9 +182,9 @@ input {
 }
 
 .overlay {
-  background: #ff416c;
-  background: -webkit-linear-gradient(to right, #ff4b2b, #ff416c);
-  background: linear-gradient(to right, #ff4b2b, #ff416c);
+  background: #4776E6;
+  background: -webkit-linear-gradient(to right, #8E54E9, #4776E6);
+  background: linear-gradient(to right, #8E54E9, #4776E6);
   background-repeat: no-repeat;
   background-size: cover;
   background-position: 0 0;
@@ -261,7 +265,7 @@ footer p {
 }
 
 footer i {
-  color: red;
+  color: #8E54E9;
 }
 
 footer a {
@@ -296,4 +300,4 @@ footer a {
   width:100%; 
   margin:10px 0; 
 }
-#error { color:red; }
+#error { color:#8E54E9; }

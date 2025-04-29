@@ -284,6 +284,14 @@ body.dark-theme .modal {
   width: 200px;
 }
 
+/* Logo sizing and spacing */
+.sidebar-logo img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+}
+
 .sidebar-logo {
   padding: 10px 0;
   text-align: center;
