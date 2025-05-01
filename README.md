@@ -10,6 +10,7 @@ Tracks Products, Categories, Customers, Orders, Vendors, Alerts & Product Histor
 ---
 
 ## Project Report - [Link Here](https://github.com/BeastBoom/Dhruv_Gupta_BCA-A_Inventory-Management-System/blob/main/Project%20Report%20-%20Inventory%20Management%20System.pdf)
+## Presentation (PPT) - [Link Here](https://github.com/BeastBoom/Dhruv_Gupta_BCA-A_Inventory-Management-System/blob/main/Presentation%20-%20Inventory%20Management%20System.pdf)
 
 ---
 
