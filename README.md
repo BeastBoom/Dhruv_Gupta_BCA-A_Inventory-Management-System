@@ -11,6 +11,7 @@ Tracks Products, Categories, Customers, Orders, Vendors, Alerts & Product Histor
 
 ## Project Report - [Link Here](https://github.com/BeastBoom/Dhruv_Gupta_BCA-A_Inventory-Management-System/blob/main/Project%20Report%20-%20Inventory%20Management%20System.pdf)
 ## Presentation (PPT) - [Link Here](https://github.com/BeastBoom/Dhruv_Gupta_BCA-A_Inventory-Management-System/blob/main/Presentation%20-%20Inventory%20Management%20System.pdf)
+## Video Presentation - [Link Here](https://krmangalameduin-my.sharepoint.com/:v:/g/personal/2401201015_krmu_edu_in/EUif0oBCi6BMqXB9AYmRYSwBcjzgEBw67Jx5_ETvmLHOfQ?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&e=jqVf6C)
 
 ---
 
