@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (data.success) {
           sessionStorage.setItem('userId', data.user.id);
-          window.location.href = 'templates/dashboard.html';
+          window.location.href = '../templates/dashboard.html';
         } else {
           alert('Invalid credentials.');
         }
